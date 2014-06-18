@@ -74,9 +74,9 @@ CREATE TABLE actions_log (
 CREATE TABLE watering_plan (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     actuator            INTEGER          REFERENCES actuators ( id ) NOT NULL,
-    from                DATETIME         NOT NULL,
+    [from]                DATETIME         NOT NULL,
     duration            INTEGER          NOT NULL,
     weekdays_bitmask    VARCHAR( 8 )     DEFAULT ('01111111') NOT NULL,
-    is_valid            BOOLEAN          DEFAULT ( TRUE ) NOT NULL,
-    is_forced           BOOLEAN          DEFAULT ( FALSE ) NOT NULL
+    is_valid            BOOLEAN          DEFAULT ( 1 ) NOT NULL,
+    is_forced           BOOLEAN          DEFAULT ( 0 ) NOT NULL
 );
