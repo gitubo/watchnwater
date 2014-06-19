@@ -5,7 +5,7 @@
  * ******Configuration section*************
  * ************************************** */
 
-define("VERSION", "7");
+define("VERSION", "0.1");
 date_default_timezone_set('Europe/Rome');
 define("DAYS_HISTORIC", 30);
 define("USER_NO_IP", "user");
@@ -15,72 +15,71 @@ define("PHP_LOG_FOLDER", "/mnt/sd/rhc/log/php.log");
 define("DATABASE_FILE", 'sqlite:/mnt/sd/rhc/wnwdb.sqlite');
 
 
-//define("PHP_LOG_FOLDER", "c:\php.log");
-//define("DATABASE_FILE", 'sqlite:C:\control_temp.sqlite');
-
-
 /* * **************************************
  * ******End of configuration section*******
  * ************************************** */
 
-require("bridgeclient.class.php");
+require("bridgeclient.php");
 /*
-  Available rest tasks:
- * historical: retrieves the temperature from the arduino with a rest call and inserts the data in the database
-
- * insert_command: Inserts a command in the command table.
-  Parameters:
-  c= "on" or "off".
-  cl= A string containing the client name
- * update_ip: Forces an update of our external ip in the NO-IP Service.
- * clean : cleans old data from the tables
- * v: retrieves the version of this script
- * insert_desired_temp: inserts the desired temp in the table for historical purposes. Maybe not useful.
- * stats_per_day: retrieves the statistics on a daily basis
- * stats_grouped: to group the statistics per week, month...
+ * Available commands:
+ *
  */
 
-
+/* 
+ * There are just one connection to the DB and one connection to the bridge 
+ * so, in order to make the code easy, we will have two global variables 
+ * to manage these two connections, created only when managing a command
+ */
+$dblink = null;
+$bridge = null;
 
 try {
 
-
-    logi("---------------------------");
-    $logString = "";
-
-    /*For debug purposes only*/
-    //  $_POST["t"] = "check_program";
-    // $_POST["day"] = "0";
-    //  $_POST["program"] = "[[0,21,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]";
-
-//    $_POST["t"] = "save_program2";
-//    $_POST["day"] = "0";
-//    $_POST["program"] = "[0,21,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]";
-
-    /*   $_POST["t"] = "update_setting";
-       $_POST["key"] = "work_mode";
-       $_POST["value"] = "manual";
-   */
-
-    // $_POST["t"] = "historical";
-
-
-    if (isset($_POST["t"]) && $_POST["t"] != "") {
+    if (isset($_POST["command"]) && $_POST["command"] != "") {
         #Retrieve the task
-        $task = $_POST["t"];
+        $command = $_POST["command"];
 
         $logString = "";
+        logi("Evaluation of command '" . $task . "' started");
 
-        logi("Task: " . $task . " start. ");
+		logi("Connecting to the bridge");
+		$bridge = new bridgeclient();
+		$bridge->connect();
 
-        $link = new \PDO(DATABASE_FILE);
+		logi("Connecting to the database");
+        $dblink = new \PDO(DATABASE_FILE);
+
+		// Main switch
+		switch ($command) {
+		    case "retrieve_settings":
+        		retrieve_settings();
+        		break;
+    		case "version":
+	            send_output(VERSION);
+        		break;
+    		case "log_filename":
+	            send_output(PHP_LOG_FOLDER);
+        		break;
+        	default:
+        		$logString = "Invalid command specified";
+        		send_output($logString);
+        		logi($logString);		
+		}
+		
+		logi("Disconnecting the bridge");
+		$bridge->disconnect();
+
+		logi("Disconnecting from the database");
+        $dblink = null;
+
+        logi("Evaluation of command '" . $command . "' completed");
+        
+/*
 
         if ($task === "publish_settings") {
             publish_settings($link);
         }
 
-
-        //Saves a program of temperatures (one for each hour of the day) for a specified day
         if ($task === "save_program") {
 
             $program = $_POST["program"];
@@ -166,7 +165,7 @@ try {
 
 
         if ($task === "stats_grouped") {
-            /*W to group by week, m to group by month, and Y to group by year*/
+            //W to group by week, m to group by month, and Y to group by year
 
             $g = $_POST["group"];
 
@@ -195,12 +194,10 @@ try {
             send_output($result);
             //$logString .= "Done";
         }
+        */
 
-
-        logi("Task: " . $task . " done. ");
-        $link = null;
     } else {
-        $logString .= "Without task";
+        $logString = "No command specified";
         send_output($logString);
         logi($logString);
     }
@@ -216,6 +213,36 @@ try {
     exit;
 }
 
+
+/***** FUNCTIONS *****/
+
+function retrieve_settings($link)
+{
+    logi("Retrieving settings...");
+
+    $query = "select name, int_value, string_value, change_date from settings";
+    $settings = getDataArray($query);
+
+    foreach ($settings as $s) {
+        $msm = "Setting " . $s['name'] . " -> int_value=" . $s['int_value'];
+        $msm .= ", string_value='" . $s['string_value'] . "' (last changed on " . $s['change_date'] . ")");
+        logi($msm);
+    }
+}
+
+function getDataArray($query)
+{
+	if($dblink == null) {
+		logi("Invalid database link");
+		return null;
+	}
+    $handle = $dblink->prepare($query);
+    $handle->execute();
+    return $handle->fetchAll(PDO::FETCH_ASSOC);
+
+}
+
+/*
 function do_query($query, $link)
 {
     $handle = $link->prepare($query);
@@ -275,11 +302,11 @@ function do_Curl($url)
     return curl_exec($curl);
 }
 
-function logi($cadena)
+function logi($message)
 {
     try {
         $a = date("Y-m-d H:i:s");
-        $s = $a . "   " . $cadena . "\n";
+        $s = $a . "   " . $message . "\n";
         error_log($s, 3, PHP_LOG_FOLDER);
     } catch (\Exception $ex) {
         echo $ex->getMessage();
@@ -516,6 +543,8 @@ function send_output($output)
     ob_end_flush();
 
 }
+
+*/
 
 /**
  * @param $program
