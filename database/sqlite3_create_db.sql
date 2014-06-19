@@ -20,6 +20,7 @@ CREATE TABLE sensors_log (
     temperature         NUMERIC( 4, 2 ),
     humidity            NUMERIC( 2, 0 ),
     pressure            NUMERIC( 6, 2 ),
+    soil_moisture       NUMERIC( 2, 0 ),
     luminosity          NUMERIC( 6, 0 )
 );
 
