@@ -6,6 +6,8 @@
 #include <Adafruit_BMP085.h>
 #include <WatchNWater.h>
 
+
+
 DHT dht(DHTPIN, DHTTYPE);
 RTC_DS1307 rtc;
 Adafruit_BMP085 bmp;
@@ -18,10 +20,14 @@ void setup() {
   digitalWrite(LEDPIN, HIGH);
   
   // initialize serial communication:
+  Serial.begin(9600);
+  while (!Serial);
   Bridge.begin();
-  Console.begin(); 
-  while (!Console); // wait for Console port to connect.
-  Console.println("You're connected to the Console");
+//  Console.begin(); 
+//  while (!Console); // wait for Console port to connect.
+//  Console.println("You're connected to the Console");
+  Serial.println("You're connected");
+
 
   // initialize I2C
   Wire.begin();
@@ -29,7 +35,7 @@ void setup() {
   // initialize RealTimeClock module
   rtc.begin();
   if (! rtc.isrunning()) {
-    Console.println("ERROR: RTC does not work correctly.");
+    Serial.println("ERROR: RTC does not work correctly.");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   } else {
     setSystemDateTime(rtc.now());
@@ -40,11 +46,12 @@ void setup() {
 
   // initialize BMP180 module
   if (!bmp.begin()) {
-	 Console.println("ERROR: BMP180 does not work correctly.");
+	 Serial.println("ERROR: BMP180 does not work correctly.");
   }
 
   // Setup procedure complete
   digitalWrite(LEDPIN, LOW);
+  delay(2000);
 }
 
 void loop() {
@@ -52,51 +59,54 @@ void loop() {
 
   DateTime now = rtc.now();
   //Check if a reset of system datetime is needed
-  if(Bridge.get("align_datetime") == "1"){
-    setSystemDateTime(now;
+  char _align_datetime[1];
+  Bridge.get("align_datetime", _align_datetime, 1);
+  int align_datetime = atoi(_align_datetime);
+  if(align_datetime != 0){
+    setSystemDateTime(now);
   }
 
   // Read timestamp
-  String _timestamp = formattedDateTime(now;
-  Console.println("Timestamp from the RTC module: " + _timestamp); 
+  String _timestamp = formattedDateTime(now);
+  Serial.println("Timestamp from the RTC module: " + _timestamp); 
   
   // Read humidity and temperature from dht sensor
   float _humidity = dht.readHumidity();
   float _temperature = dht.readTemperature();
-  if (isnan(h) || isnan(t)) {
-    Console.println("Failed to read from DHT sensor");
+  if (isnan(_humidity) || isnan(_temperature)) {
+    Serial.println("Failed to read from DHT sensor");
   } else {
-    Console.println("Data from DHT sensor: "); 
-    Console.print("Humidity: "); 
-    Console.print(_humidity);
-    Console.println("%");
-    Console.print("Temperature: "); 
-    Console.print(_temperature);
-    Console.println("*C");
+    Serial.println("Data from DHT sensor: "); 
+    Serial.print("Humidity: "); 
+    Serial.print(_humidity);
+    Serial.println("%");
+    Serial.print("Temperature: "); 
+    Serial.print(_temperature);
+    Serial.println("*C");
   }
   
   // Read pressure and temperature from bmp180 module
   float _pressure = bmp.readPressure();
   _temperature = bmp.readTemperature();
-  if (isnan(p) || isnan(t)) {
-    Console.println("Failed to read from BMP180 module");
+  if (isnan(_pressure) || isnan(_temperature)) {
+    Serial.println("Failed to read from BMP180 module");
   } else {
-    Console.println("Data from BMP180 module: "); 
-    Console.print("Pressure: "); 
-    Console.print(_pressure);
-    Console.println("Pa");
-    Console.print("Temperature: "); 
-    Console.print(_temperature);
-    Console.println("*C");
+    Serial.println("Data from BMP180 module: "); 
+    Serial.print("Pressure: "); 
+    Serial.print(_pressure);
+    Serial.println("Pa");
+    Serial.print("Temperature: "); 
+    Serial.print(_temperature);
+    Serial.println("*C");
   }
-
+  
   //Make sensors info available
-  Bridge.put("timestamp", String(_timestamp));
-  Bridge.put("temperature", String(_temperature));
-  Bridge.put("humidity", String(_humidity));
-  Bridge.put("pressure", String(_pressure));
-  Bridge.put("soil_moisture", "";
-  Bridge.put("luminosity", "");
+  Bridge.put(String("timestamp"), _timestamp);
+  Bridge.put(String("temperature"), String(_temperature));
+  Bridge.put(String("humidity"), String(_humidity));
+  Bridge.put(String("pressure"), String(_pressure));
+  Bridge.put(String("soil_moisture"), String(""));
+  Bridge.put(String("luminosity"), String(""));
 
   digitalWrite(LEDPIN, LOW);
   //Wait one second
@@ -104,13 +114,13 @@ void loop() {
 
 }
 
-void setSystemDateTime(DateTime now){
-    String unixFormattedDateTime = unixFormatDateTime(now;
-    String message = "Set system date according to the onboard RTC (" + unixFormattedDateTime + ")";
-    Console.println(message);
+void setSystemDateTime(DateTime _now){
+    String unixDateTime = unixFormattedDateTime(_now);
+    String message = "Set system date according to the onboard RTC (" + unixDateTime + ")";
+    Serial.println(message);
     Process p;            
     p.begin("date");      
-    p.addParameter(unixFormattedDateTime); 
+    p.addParameter(unixDateTime); 
     p.run();
 
 }
@@ -122,9 +132,8 @@ String unixFormattedDateTime(DateTime now){
   retval += print2Char(now.day());
   retval += print2Char(now.hour());
   retval += print2Char(now.minute());
-  if(now.year().lenght()==4) retval += now.year();
-  else if(now.year().lenght()==2) retval += "20" + now.year();
-  else retval += "2000";
+  if(now.year()>99) retval += now.year();
+  else retval += "20" + now.year();
   retval += ".";
   retval += print2Char(now.second());
   return retval;
@@ -135,9 +144,8 @@ String formattedDateTime(DateTime now){
   String retval = "";
   retval += print2Char(now.month()) + "/";
   retval += print2Char(now.day()) + "/";
-  if(now.year().lenght()==4) retval += now.year();
-  else if(now.year().lenght()==2) retval += "20" + now.year();
-  else retval += "2000";
+  if(now.year()>99) retval += now.year();
+  else retval += "20" + now.year();
   retval += " ";
   retval += print2Char(now.hour()) + ":";
   retval += print2Char(now.minute()) + ":";
