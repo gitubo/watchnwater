@@ -12,6 +12,8 @@
 define('VERBOSE', true);
 define("LOG_FILENAME", "/mnt/sd/rhc/log/engine.log");  // the log file
 define("DB_FILENAME", 'sqlite:/mnt/sd/rhc/wnwdb.sqlite');  // the sqlite3 db
+define('SUCCESS', 0);
+define('GENERIC_ERROR', 1);
 
 /**
  * The class to talk with the 32U4 processore is needed
@@ -48,17 +50,16 @@ try {
      * Startup process
      */
     logi("Calling the startup procedure...");
+    global $stay_in_the_loop = true;
     startup();
 
     /**
      * Main loop
      */
-    logi("Running the main loop...");
-    $stay_in_the_loop = true;
+    if($stay_in_the_loop) logi("Running the main loop...");
     while($stay_in_the_loop){
 
     }
-    logi("Exit the main loop");
 
 	/**
 	 * Disconnecting the bridge and release the database
@@ -86,7 +87,10 @@ try {
 
 function startup()
 {
+	global $stay_in_the_loop = false;
 
+	// Startup procedure complited successfully
+	$stay_in_the_loop = true;
 }
 
 /**
@@ -127,7 +131,5 @@ function logi($message)
         echo $ex->getMessage();
     }
 }
-
-function get_timestamp
 
 ?>
