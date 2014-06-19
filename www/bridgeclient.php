@@ -1,18 +1,19 @@
 <?php
-/*
 
-Required packages
-------------
-php5
-php5-mod-sockets
-php5-mod-json
-php5-cgi or php5-cli
-
+/**
+* Watch 'n' Water Brigde Class to communicate with Arduino 
+*
+* This is a PHP class used to communicate with Arduino
+* using the mailbox provided by the system as a
+* TCPJSONServer at 127.0.0.1:5700 (on the Linino side)
+*
+* LICENSE: GPL v3
+*
 */
 
 error_reporting(E_ERROR);
 
-class bridgeclient
+class wnw_bridge
 {
 
     private $address = "127.0.0.1";
@@ -22,12 +23,12 @@ class bridgeclient
     public function connect()
     {
         ($this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP))
-           || die("socket_create() failed: " . socket_strerror(socket_last_error()) . "\n");
+           || die("Creation ofthe socket failed: " . socket_strerror(socket_last_error()) . "\n");
         
         socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, array("sec" => 3, "usec" => 0));
         
         socket_connect($this->socket, $this->address, $this->port)
-           || die("socket_connect() failed: " . socket_strerror(socket_last_error($this->socket)) . "\n");
+           || die("Connection to the socket failed: " . socket_strerror(socket_last_error($this->socket)) . "\n");
     }
 
     public function disconnect()
@@ -37,34 +38,36 @@ class bridgeclient
 
     public function put($key, $value)
     {
-        return $this->sendcommand("put", $key, $value);
+        return $this->publish("put", $key);
     }
 
     public function get($key)
     {
-        return $this->sendcommand("get", $key);
+        return $this->publish("get", $key);
     }
 
-    private function sendcommand($command, $key, $value = "")
+    private function publish($command, $key, $value)
     {
-        $jsonreceive = "";
-        $obraces = 0;
-        $cbraces = 0;
+        if($command == null || $key == null || $value == null) return;
 
-        $jsonsend = '{"command":"' . $command . '","key":"' . $key . '","value":"' . $value . '"}';
-        socket_write($this->socket, $jsonsend, strlen($jsonsend));
+        $jsonBuffer = "";
+        $num_open_braces = 0;
+        $num_close_braces = 0;
+
+        $message = '{"command":"' . $command . '","key":"' . $key . '","value":"' . $value . '"}';
+        socket_write($this->socket, $message, strlen($message));
 
         do {
             socket_recv($this->socket, $buffer, 1, 0);
-            $jsonreceive .= $buffer;
-            if ($buffer == "{") $obraces++;
-            if ($buffer == "}") $cbraces++;
-        } while ($obraces != $cbraces);
+            $jsonBuffer .= $buffer;
+            if ($buffer == "{") $num_open_braces++;
+            if ($buffer == "}") $num_close_braces++;
+        } while ($num_open_braces != $num_close_braces);
 
-        $jsonarray = json_decode($jsonreceive);
-        if ($jsonarray->{'value'} == NULL) $jsonarray->{'value'} = "None";
+        $jsonArray = json_decode($jsonBuffer);
+        if ($jsonArray->{'value'} == NULL) $jsonArray->{'value'} = "";
 
-        return $jsonarray->{'value'};
+        return $jsonArray->{'value'};
     }
 
 }
