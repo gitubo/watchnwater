@@ -50,6 +50,15 @@ CREATE INDEX idx_actuators_log ON actuators_log (
     actuator
 );
 
+-- Table: actuators_status
+CREATE TABLE actuators_status (
+    actuator            INTEGER          REFERENCES actuators ( id ) NOT NULL UNIQUE,
+    date                DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
+    boolean_value       BOOLEAN,
+    int_value           INTEGER,
+    string_value        VARCHAR( 64 )
+);
+
 -- Table: actions
 CREATE TABLE actions (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
