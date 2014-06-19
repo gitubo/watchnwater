@@ -11,54 +11,75 @@ define("DAYS_HISTORIC", 30);
 define("USER_NO_IP", "user");
 define("PASSWORD_NO_IP", "password");
 define("HOST_NAME_NO_IP", "host");
-define("PHP_LOG_FOLDER", "/mnt/sd/rhc/log/php.log");
-define("DATABASE_FILE", 'sqlite:/mnt/sd/rhc/wnwdb.sqlite');
+define("LOG_FILENAME", "/mnt/sd/rhc/log/webinterface.log");
+define("DB_FILENAME", 'sqlite:/mnt/sd/rhc/wnwdb.sqlite');
 
 
 /* * **************************************
  * ******End of configuration section*******
  * ************************************** */
 
-require("bridgeclient.php");
-/*
- * Available commands:
- *
- */
-
 /* 
- * There are just one connection to the DB and one connection to the bridge 
- * so, in order to make the code easy, we will have two global variables 
- * to manage these two connections, created only when managing a command
+ * There is just one connection to the DB so, in order to make the code easy, 
+ * we will have a global variable to manage it
  */
 $dblink = null;
-$bridge = null;
 
 try {
 
+    logi(" <-- NEW REQUEST COMING --> ");
     if (isset($_POST["command"]) && $_POST["command"] != "") {
         #Retrieve the task
         $command = $_POST["command"];
 
-        $logString = "";
-        logi("Evaluation of command '" . $task . "' started");
+        logi("Evaluating command '" . $task . "'...");
 
-		logi("Connecting to the bridge");
-		$bridge = new bridgeclient();
-		$bridge->connect();
-
-		logi("Connecting to the database");
-        $dblink = new \PDO(DATABASE_FILE);
+		logi("Connecting to the database...");
+        global $dblink = new \PDO(DB_FILENAME);
 
 		// Main switch
 		switch ($command) {
-		    case "retrieve_settings":
-        		retrieve_settings();
-        		break;
+            case "retrieve_settings":
+                retrieve_settings();
+                break;
+            case "retrieve_actions":
+                retrieve_actions();
+                break;
+            case "retrieve_actions_log":
+                $from = null;
+                $to = null;
+                if (isset($_POST["from"]) && $_POST["from"] != "") $from = $_POST["from"];
+                if (isset($_POST["to"]) && $_POST["to"] != "") $to = $_POST["to"];
+                retrieve_actions_log($from,$to);
+                break;
+            case "retrieve_actuators":
+                retrieve_actuators();
+                break;
+            case "retrieve_actuators_latest_status":
+                retrieve_actuators_status();
+                break;
+            case "retrieve_actuators_log":
+                $from = null;
+                $to = null;
+                if (isset($_POST["from"]) && $_POST["from"] != "") $from = $_POST["from"];
+                if (isset($_POST["to"]) && $_POST["to"] != "") $to = $_POST["to"];
+                retrieve_actuators_log($from,$to);
+                break;
+            case "retrieve_sensors_latest_values":
+                retrieve_sensors_latest_values();
+                break;
+            case "retrieve_sensors_log":
+                $from = null;
+                $to = null;
+                if (isset($_POST["from"]) && $_POST["from"] != "") $from = $_POST["from"];
+                if (isset($_POST["to"]) && $_POST["to"] != "") $to = $_POST["to"];
+                retrieve_sensors_log($from,$to);
+                break;
     		case "version":
 	            send_output(VERSION);
         		break;
     		case "log_filename":
-	            send_output(PHP_LOG_FOLDER);
+	            send_output(LOG_FILENAME);
         		break;
         	default:
         		$logString = "Invalid command specified";
@@ -66,136 +87,10 @@ try {
         		logi($logString);		
 		}
 		
-		logi("Disconnecting the bridge");
-		$bridge->disconnect();
-
 		logi("Disconnecting from the database");
         $dblink = null;
 
         logi("Evaluation of command '" . $command . "' completed");
-        
-/*
-
-        if ($task === "publish_settings") {
-            publish_settings($link);
-        }
-
-        if ($task === "save_program") {
-
-            $program = $_POST["program"];
-            $dia = $_POST["day"];
-            save_program($program, $link, $dia);
-
-        }
-
-
-        if ($task === "load_program") {
-
-            $day = $_POST["day"];
-            logi("Loading program day " . $day);
-            $query = "select * from programs_detail where week_day=" . $day . " order by hour asc";
-            $result = do_query2($query, $link);
-            send_output($result);
-
-        }
-
-        if ($task === "check_program") {
-            check_program($link);
-        }
-
-        //Saves the actual temperature in the temperatures table
-        if ($task === "historical") {
-            historical($link);
-        }
-
-        if ($task === "create_settings1Time") {
-            create_settings1Time($link);
-        }
-
-
-        //Updates the IP on NO_IP
-        if ($task === "update_ip") {
-            update_ip($ip);
-
-        }
-
-        if ($task === "process_historical_data") {
-            process_historical_data($link);
-        }
-
-
-        if ($task === "v") {
-            send_output(VERSION);
-        }
-
-
-        if ($task === "clean") {
-            clean_tables($link);
-        }
-
-
-        if ($task === "update_setting") {
-            $key = $_POST["key"];
-            $value = $_POST["value"];
-            update_setting($link, $key, $value);
-        }
-
-        if ($task === "temps_between") {
-            $start = $_POST["start"];
-            $end = $_POST["end"];
-            temps_between($start, $end, $link, $logString);
-        }
-
-
-        if ($task === "stats_per_day") {
-            $start = $_POST["start"];
-            $end = $_POST["end"];
-            $query = "select * from statistics ";
-            if ($start != "" && $end != "") {
-                $query .= " where date between '" . $start . "' and '" . $end . "' ";
-            }
-
-            $query .= " order by date asc";
-
-            $result = do_query2($query, $link);
-            send_output($result);
-            //$logString .= "Done";
-
-        }
-
-
-        if ($task === "stats_grouped") {
-            //W to group by week, m to group by month, and Y to group by year
-
-            $g = $_POST["group"];
-
-            if ($g === "W" || $g === "w") {
-                $g = "%W/%Y";
-            }
-            if ($g === "m" || $g === "M") {
-                $g = "%m/%Y";
-            }
-
-            if ($g === "y" || $g === "Y") {
-                $g = "%Y";
-            }
-
-
-            //"select strftime('%" . $g . "',date) as date, "
-            $query = "select date, "
-                . " sum (system_on) as system_on, "
-                . " sum(heating) as heating, "
-                . " avg (average_temp)as average_temp, "
-                . " avg(average_desired_temp) as average_desired_temp "
-                . " from statistics "
-                . " group by strftime('" . $g . "',date) "
-                . " order by date asc ";
-            $result = do_query2($query, $link);
-            send_output($result);
-            //$logString .= "Done";
-        }
-        */
-
     } else {
         $logString = "No command specified";
         send_output($logString);
@@ -216,7 +111,9 @@ try {
 
 /***** FUNCTIONS *****/
 
-function retrieve_settings($link)
+/* Settings */
+
+function retrieve_settings()
 {
     logi("Retrieving settings...");
 
@@ -230,8 +127,158 @@ function retrieve_settings($link)
     }
 }
 
+/* Actuators */
+
+function retrieve_actuators()
+{
+    logi("Retrieving the list of the actuators...");
+
+    $query = "SELECT id, description FROM actuators";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = "ActuatorID = " . $i['id'] . " -> type=" . $i['type'] . ", '" . $i['description'] . "'";
+        logi($msm);
+    }
+}
+
+function retrieve_actuators_latest_status()
+{
+    logi("Retrieving the latest status of the actuators...");
+
+    logi("Retrieving the actuators list...");
+
+    $query = "SELECT id FROM actuators";
+    $actuators = getDataArray($query);
+
+    foreach ($actuators as $a) {
+        $query2 = "SELECT actuator, date, boolean_value, int_value, string_value FROM actuators_log";
+        $query2 .= " WHERE id = (SELECT MAX(id) FROM actuators_log WHERE actuator = " . $a . ")"
+        $items = getDataArray($query2);
+
+        foreach ($items as $i) {
+            $msm = "ActuatorID = " . $i['actuator'] . " @ " . $i['date'] . " -> BOOL=" . $i['boolean_value'];
+            $msm .= ", INT=" . $i['int_value'] . ", STRING='" . $i['string_value'] . "'";
+            logi($msm);
+        }
+    }
+}
+
+function retrieve_actuators_log($from, $to)
+{
+    logi("Retrieving the log of the actuators [$from=" . $from . ", $to=" . $to . "]...");
+
+    $query = "SELECT date, actuator, boolean_value, int_value, string_value FROM actuators_log";
+    if ($from != null || $to != null) $query .= " WHERE";
+    if ($from != null) {
+        $query .= " date >= " . $from;
+        if ($to != null) $query .= " AND date <= " . $to;
+    } elseif ($to != null) $query .= " date <= " . $to;
+    $query .= " ORDER BY date";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = "ActuatorLOG " . $i['date'] . " -> actuatorid=" . $i['actuator'];
+        $msm .= " -> BOOL=" . $i['boolean_value'] . ", INT=" . $i['int_value'] . ", STRING='" . $i['string_value'] . "'";
+        logi($msm);
+    }
+}
+
+/* Actuators */
+
+function retrieve_sensors_latest_values()
+{
+    logi("Retrieving the latest values of the sensors...");
+
+    $query = "SELECT id, date, temperature, humidity, pressure, soil_moisture, luminosity FROM sensors_log";
+    $query .= " WHERE date = (SELECT MAX(date) FROM sensors_log)"
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = $i['date'] . " -> temperature=" . $i['temperature'] . ", humidity=" . $i['humidity'];
+        $msm .= ", pressure=" . $i['pressure'] . ", soil_moisture='" . $i['soil_moisture'];
+        $msm .= ", luminosity=" . $i['luminosity']; 
+        logi($msm);
+    }
+}
+
+function retrieve_sensors_log($from, $to)
+{
+    logi("Retrieving the log of the sensors [$from=" . $from . ", $to=" . $to . "]...");
+
+    $query = "SELECT id, date, temperature, humidity, pressure, soil_moisture, luminosity FROM sensors_log";
+    if ($from != null || $to != null) $query .= " WHERE";
+    if ($from != null) {
+        $query .= " date >= " . $from;
+        if ($to != null) $query .= " AND date <= " . $to;
+    } elseif ($to != null) $query .= " date <= " . $to;
+    $query .= " ORDER BY date";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = $i['date'] . " -> temperature=" . $i['temperature'] . ", humidity=" . $i['humidity'];
+        $msm .= ", pressure=" . $i['pressure'] . ", soil_moisture='" . $i['soil_moisture'];
+        $msm .= ", luminosity=" . $i['luminosity']; 
+        logi($msm);
+    }
+}
+
+/* Actions */
+
+function retrieve_actions()
+{
+    logi("Retrieving the list of the actions...");
+
+    $query = "SELECT id, description FROM actions";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = "ActionID = " . $i['id'] . " -> '" . $i['description'] . "'";
+        logi($msm);
+    }
+}
+
+function retrieve_actions_log($from, $to)
+{
+    logi("Retrieving the log of the actions [$from=" . $from . ", $to=" . $to . "]...");
+
+    $query = "SELECT date, action, from, to FROM actions_log";
+    if ($from != null || $to != null) $query .= " WHERE";
+    if ($from != null) {
+        $query .= " date >= " . $from;
+        if ($to != null) $query .= " AND date <= " . $to;
+    } elseif ($to != null) $query .= " date <= " . $to;
+    $query .= " ORDER BY date";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = "ActionLOG " . $i['date'] . " -> actionID=" . $i['action'];
+        logi($msm);
+    }
+}
+
+/* Watering plan */
+
+function retrieve_watering_plan()
+{
+    logi("Retrieving the watering plan...");
+
+    $query = "SELECT id, actuator, time(from, '%H:%M') as start_time, duration, weekdays_bitmask, is_forced FROM watering_plan";
+    $query .= " WHERE is_valid = 1";
+    $items = getDataArray($query);
+
+    foreach ($items as $i) {
+        $msm = "PlanID = " . $i['id'] . " -> actuatorID=" . $i['actuator'];
+        $msm .= " -> @ " . $i['start_time'] . ", duration " . $i['duration'] . " min(s)";
+        $msm .= " weekdays = '" . $i['weekdays_bitmask'] . " (forced = " . $i['is_forced'] . ")";
+        logi($msm);
+    }
+}
+/* Utility */
+
 function getDataArray($query)
 {
+    gloabal $dblink;
 	if($dblink == null) {
 		logi("Invalid database link");
 		return null;
@@ -239,6 +286,26 @@ function getDataArray($query)
     $handle = $dblink->prepare($query);
     $handle->execute();
     return $handle->fetchAll(PDO::FETCH_ASSOC);
+
+}
+
+function logi($message)
+{
+    try {
+        $a = date("Y-m-d H:i:s");
+        $s = $a . "   " . $message . "\n";
+        error_log($s, 3, LOG_FILENAME);
+    } catch (\Exception $ex) {
+        echo $ex->getMessage();
+    }
+}
+
+function send_output($output)
+{
+    if (function_exists('ob_gzhandler')) ob_start('ob_gzhandler');
+    else ob_start();
+    echo $output;
+    ob_end_flush();
 
 }
 
@@ -546,215 +613,6 @@ function send_output($output)
 
 */
 
-/**
- * @param $program
- * @param $link
- * @param $dia
- * @return array
- */
-function save_program($program, $link, $dia)
-{
-    $array = json_decode($program);
-
-    $query = "delete from programs";
-    $link->exec($query);
-    $query = "delete from programs_detail where week_day=?";
-    $handle = $link->prepare($query);
-    $handle->bindValue(1, $dia);
-    $handle->execute();
-
-    $query = "INSERT INTO  programs (id,description) VALUES (?,?)";
-    $handle = $link->prepare($query);
-    $handle->bindValue(1, "1");
-    $handle->bindValue(2, "Prueba");
-    $handle->execute();
-    $id_programa = $link->lastInsertId();
-    //Recorremos el array y hacemos los inserts pertinentes.
-
-    //$contador_dia = 0;
-    $query = "INSERT INTO  programs_detail (id_program,week_day,hour,desired_temp)VALUES (?,?,?,?)";
-    $handle = $link->prepare($query);
-
-
-    $contador_hora = 0;
-    foreach ($array as $temperatura) {
-        $handle->bindValue(1, $id_programa);
-        $handle->bindValue(2, $dia);
-        $handle->bindValue(3, $contador_hora);
-        $handle->bindValue(4, $temperatura);
-        $handle->execute();
-        $contador_hora++;
-    }
-    logi("Day " . $dia . " saved.");
-}
-
-/**
- * @param $link
- * @return array
- */
-function check_program($link)
-{
-//Recuperamos de la tabla de parametros, si se ha establecido el modo de funcionamiento en auto o manual.
-    $query = "select value from settings where key='work_mode'";
-    $handle = $link->prepare($query);
-    $handle->execute();
-    $fila = $handle->fetch();
-    $valor = $fila["value"];
-
-
-    if ($valor === "auto") {
-        //TODO: pendiente_ solo enviar variaciones si es diferente de el estado actual del sistema.
-
-        //Si es automatico, recuperamos la hora de 0 a 23 y el dia de la semana actual de 0  a 6
-        $diaDeLaSemana = date("N") - 1;
-        $horaDelDia = date("H");
-        logi("Task: Check program. Status: Auto. Day " . $diaDeLaSemana . ", hour " . $horaDelDia);
-        //Consultamos en la tabla de programaciones si existe un registro para este dia-hora. En caso afirmativo, insertamos el dato apropiado en la memoria intermedia
-        $query = "select desired_temp from programs_detail where week_day=" . $diaDeLaSemana . " and hour=" . $horaDelDia;
-        $handle = $link->prepare($query);
-        $handle->execute();
-        $fila = $handle->fetch();
-        $temperaturaDeseada = 0;
-        if ($fila) {
-            $temperaturaDeseada = $fila["desired_temp"];
-        } else {
-            logi("Check program, no program fot this day/hour");
-        }
-
-        $client = new bridgeclient();
-
-
-        //Si la temperatura es mayor que cero, insertamos la temperatura deseada y el on en la memoria intermedia
-        $estado = "0";
-        if ($temperaturaDeseada > 0) {
-            $client->put("desired_temp", $temperaturaDeseada);
-            //$a = "http://localhost/data/put/desired_temp/" . $temperaturaDeseada;
-
-            //do_Curl($a);
-            $estado = "1";
-
-        }
-        logi("Task: Check program, desired_temp: " . $temperaturaDeseada);
-        //Averiguamos el estado del sistema, on u off
-        //$system_on = do_curl("http://localhost/data/get/system_on");
-        $system_on = $client->get("system_on");
-        //Solo cambiamos el estado, si el nuevo estado es diferente del anterior
-        if ($system_on != $estado) {
-            $client->put("pending_command", $estado);
-            $client->put("pending_command_client", "PROGRAM");
-            /*$a = "http://localhost/data/put/pending_command/" . $estado;
-            do_Curl($a);
-            $a = "http://localhost/data/put/pending_command_client/PROGRAM";
-            do_Curl($a);*/
-        }
-    } else {
-        logi("Task: Check program. Status: manual");
-        //    $estado = "0";
-    }
-
-
-}
-
-/**
- * @param $link
- * @return array
- */
-function historical($link)
-{
-    $client = new bridgeclient();
-
-    $query = "INSERT INTO  temperatures (node0,node1,node2,node3,node4,node5,system_on,heating,desired_temperature)VALUES (?,?,?,?,?,?,?,?,?)";
-    $handle = $link->prepare($query);
-
-    $node0_temp = null;
-    $node0_date = null;
-    $node0_name = null;
-
-    $node1_temp = null;
-    $node1_date = null;
-    $node1_name = null;
-
-    $node2_temp = null;
-    $node2_date = null;
-    $node2_name = null;
-
-    $node3_temp = null;
-    $node3_date = null;
-    $node3_name = null;
-
-    $node5_temp = null;
-    $node5_date = null;
-    $node5_name = null;
-
-    $node4_temp = null;
-    $node4_date = null;
-    $node4_name = null;
-
-
-    for ($a = 0; $a < 6; $a++) {
-        $temp = $client->get("node" . $a . "_temp");
-        $name = $client->get("node" . $a . "_name");
-
-        $date = $client->get("node" . $a . "_date");
-
-        ${"node" . $a . "_temp"} = ($temp === "None") ? null : $temp;
-        ${"node" . $a . "_name"} = ($name === "None") ? null : $name;
-        ${"node" . $a . "_date"} = ($date === "None") ? null : $date;
-
-        $temp_string = "Node " . $a . ": " . ${"node" . $a . "_temp"} . ". Name: " . ${"node" . $a . "_name"} . ". Date: " . ${"node" . $a . "_date"};
-        logi($temp_string);
-
-    }
-
-
-    $system_on = $client->get("system_on");
-    $heating = $client->get("heating");
-    $desired_temp = $client->get("desired_temp");
-
-    //Sometimes the retrieved data is not correct (for example, instead system_on = true or false, it retrieves system_on=20.0
-    //Because of that, we need to validate the date before the insert
-
-    $ok = true;
-    if (!is_numeric($node0_temp) || !is_numeric($desired_temp)) {
-        $ok = false;
-    }
-
-
-    //The other nodes the value can be a digit or null, and the name and the date must be non null
-    for ($a = 1; $a < 6; $a++) {
-
-        if (!is_numeric(${"node" . $a . "_temp"}) || ${"node" . $a . "_date"} == null || ${"node" . $a . "_name"} == null) {
-            ${"node" . $a . "_temp"} = null;
-        }
-    }
-
-    if ($system_on != "true" && $system_on != "false") {
-        $ok = false;
-    }
-
-    if ($heating != "true" && $heating != "false") {
-        $ok = false;
-    }
-
-
-    if ($ok) {
-        $handle->bindValue(1, $node0_temp);
-        $handle->bindValue(2, $node1_temp);
-        $handle->bindValue(3, $node2_temp);
-        $handle->bindValue(4, $node3_temp);
-        $handle->bindValue(5, $node4_temp);
-        $handle->bindValue(6, $node5_temp);
-        $handle->bindValue(7, $system_on);
-        $handle->bindValue(8, $heating);
-        $handle->bindValue(9, $desired_temp);
-        $handle->execute();
-        send_output("OK");
-        logi("Data ok. Node 0: ".$node0_temp." Node 1: ".$node1_temp." Node 2: ".$node2_temp." Node 3: ".$node3_temp." Node 4: ".$node4_temp." Node 5: ".$node5_temp);
-    } else {
-        //Maybe the next time we will have more luck
-        logi("Bad data in get from arduino");
-    }
-}
 
 /**
  * @param $ip
@@ -799,24 +657,6 @@ function update_setting($link, $key, $value)
 
 }
 
-/**
- * @param $start
- * @param $end
- * @param $link
- * @param $log_string
- * @return array
- */
-function temps_between($start, $end, $link)
-{
-    $query = "select temperature_date,node0,node1,node2,node3,node4,node5,system_on,desired_temperature,heating from temperatures ";
-    //$query .= " where desired_temperature>0 and desired_temperature is not null ";
-    $query .= " where desired_temperature>0 and desired_temperature is not null ";
-    if ($start != "" && $end != "") {
-        $query .= " and temperature_date between '" . $start . "' and '" . $end . "' ";
-    }
-    $query .= " order by id asc ";
 
-    $result = do_query2($query, $link);
-    send_output($result);
 
-}
+?>
