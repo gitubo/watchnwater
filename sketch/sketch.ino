@@ -32,13 +32,7 @@ void setup() {
     Console.println("ERROR: RTC does not work correctly.");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   } else {
-    String unixFormattedDateTime = unixFormatDateTime(rtc.now());
-    String message = "Set system date according to the onboard RTC (" + unixFormattedDateTime + ")";
-    Console.println(message);
-    Process p;            
-    p.begin("date");      
-    p.addParameter(unixFormattedDateTime); 
-    p.run();
+    setSystemDateTime(rtc.now());
   }
 
   // initialize DHT sensor
@@ -56,8 +50,14 @@ void setup() {
 void loop() {
   digitalWrite(LEDPIN, HIGH);
 
+  DateTime now = rtc.now();
+  //Check if a reset of system datetime is needed
+  if(Bridge.get("align_datetime") == "1"){
+    setSystemDateTime(now;
+  }
+
   // Read timestamp
-  String _timestamp = formattedDateTime(rtc.now());
+  String _timestamp = formattedDateTime(now;
   Console.println("Timestamp from the RTC module: " + _timestamp); 
   
   // Read humidity and temperature from dht sensor
@@ -91,12 +91,27 @@ void loop() {
   }
 
   //Make sensors info available
-  Bridge.put("temperature", String(_timestamp));
+  Bridge.put("timestamp", String(_timestamp));
   Bridge.put("temperature", String(_temperature));
+  Bridge.put("humidity", String(_humidity));
+  Bridge.put("pressure", String(_pressure));
+  Bridge.put("soil_moisture", "";
+  Bridge.put("luminosity", "");
 
   digitalWrite(LEDPIN, LOW);
   //Wait one second
   delay(1000);
+
+}
+
+void setSystemDateTime(DateTime now){
+    String unixFormattedDateTime = unixFormatDateTime(now;
+    String message = "Set system date according to the onboard RTC (" + unixFormattedDateTime + ")";
+    Console.println(message);
+    Process p;            
+    p.begin("date");      
+    p.addParameter(unixFormattedDateTime); 
+    p.run();
 
 }
 
