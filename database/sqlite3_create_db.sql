@@ -27,14 +27,13 @@ CREATE TABLE sensors_log (
 -- Table: actuators
 CREATE TABLE actuators (
     id                  INTEGER         PRIMARY KEY AUTOINCREMENT,
-    type				INTEGER			NOT NULL,  --0=undef, 1=boolean, 2=integer, 3=string
-    description         VARCHAR( 150 )  NOT NULL
+    sketch_name         VARCHAR( 150 )  NOT NULL UNIQUE
 );
 
-INSERT INTO [actuators] ([id], [type], [description]) VALUES (1, 1, 'Relay_1');
-INSERT INTO [actuators] ([id], [type], [description]) VALUES (2, 1, 'Relay_2');
-INSERT INTO [actuators] ([id], [type], [description]) VALUES (3, 1, 'Relay_3');
-INSERT INTO [actuators] ([id], [type], [description]) VALUES (4, 1, 'Relay_4');
+INSERT INTO [actuators] ([id], [description]) VALUES (1, 'OUTPUT1');
+INSERT INTO [actuators] ([id], [description]) VALUES (2, 'OUTPUT2');
+INSERT INTO [actuators] ([id], [description]) VALUES (3, 'OUTPUT3');
+INSERT INTO [actuators] ([id], [description]) VALUES (4, 'OUTPUT4');
 
 -- Table: actuators_log
 CREATE TABLE actuators_log (
