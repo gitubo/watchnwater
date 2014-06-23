@@ -30,10 +30,10 @@ CREATE TABLE actuators (
     sketch_name         VARCHAR( 150 )  NOT NULL UNIQUE
 );
 
-INSERT INTO [actuators] ([id], [description]) VALUES (1, 'OUTPUT1');
-INSERT INTO [actuators] ([id], [description]) VALUES (2, 'OUTPUT2');
-INSERT INTO [actuators] ([id], [description]) VALUES (3, 'OUTPUT3');
-INSERT INTO [actuators] ([id], [description]) VALUES (4, 'OUTPUT4');
+INSERT INTO [actuators] ([id], [sketch_name]) VALUES (1, 'OUTPUT1');
+INSERT INTO [actuators] ([id], [sketch_name]) VALUES (2, 'OUTPUT2');
+INSERT INTO [actuators] ([id], [sketch_name]) VALUES (3, 'OUTPUT3');
+INSERT INTO [actuators] ([id], [sketch_name]) VALUES (4, 'OUTPUT4');
 
 -- Table: actuators_log
 CREATE TABLE actuators_log (
@@ -65,9 +65,9 @@ INSERT INTO [actions] ([id], [description]) VALUES (4, 'Turned OFF [forced]');
 CREATE TABLE actions_log (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]              DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
-    action              INTEGER          REFERENCES actions ( id ) NOT NULL,
+    [action]            INTEGER          REFERENCES actions ( id ) NOT NULL,
     [from]              DATETIME,
-    to                  DATETIME,
+    [to]                DATETIME,
     note                VARCHAR( 128 )
 );
 
