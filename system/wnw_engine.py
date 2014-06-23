@@ -60,10 +60,10 @@ def initBridge():
 		logging.warning('Bridge connection already established')
 		sys.exit(1)
 	logging.info('Bridge connection established.')
-	if sendValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
-		logging.info('Bridge teste success.')
+	if putValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
+		logging.info('Bridge test: success.')
 	else:
-		logging.error('Bridge test failed. Exiting...')
+		logging.error('Bridge test: failed. Exiting...')
 		sys.exit(1)
 
 def getValue(_key):
@@ -82,7 +82,7 @@ def getValue(_key):
 		sleep(0.1)
 	return None                         
 
-def sendValue(_key, _value):
+def putValue(_key, _value):
 	global _BRIDGE_
 	_BRIDGE_.send({'command':'put', 'key':_key, 'value':_value})
 	timeout = 10;                                          
@@ -106,47 +106,81 @@ def sendValue(_key, _value):
 
 # Retrieve the outputs
 def retrieve_outputs():
-	global _OUTPUTS_ = None
+	global _OUTPUTS_
+	_OUTPUTS_ = []
 
 	cur = _DB_CON_.cursor()
 	cur.execute('SELECT id, sketch_name FROM outputs')
 	rows = cur.fetchall()
 
 	for row in rows:
-		logging.debug('OutputID = %i -> sketch_name = \'%s\'' % row[0], row[1])
+		logging.debug("OutputID = %i -> sketch_name = '%s'" % (row[0], row[1]))
 		output = {"id":row[0], "sketchName":row[1]}
-		global _OUTPUTS_.append(output) 
+		_OUTPUTS_.append(output) 
 	
 	logging.debug('Retrieved %i output(s)' % len(_OUTPUTS_))
 
+# Retrieve watering plan
+def retrieve_watering_plan():
+	global _WATERING_PLAN_
+	_WATERING_PLAN_ = []
+
+	cur = _DB_CON_.cursor()
+	query = "SELECT id, output, time([from], '%H:%M') as start_time, duration, weekdays_bitmask, is_forced FROM watering_plan"
+	query += " WHERE is_valid = 1"	
+	try:
+		cur.execute(query)
+		rows = cur.fetchall()
+
+		for row in rows:
+			logging.debug("PlanID = %i -> outputID = %i -> @ %s, duration %i min(s), weekdays '%s' (forced = %i)" % (row[0], row[1], row[2], row[3], row[4], row[5]))
+			item = {"output":row[1], "startTime":row[2], "duration":row[3], "weekdays":row[4], "isForced":row[5]}
+			_WATERING_PLAN_.append(item)
+	except Exception as error:
+		logging.error("SQLite3 execution exception: %s" % error)
+		
+	logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
+
+# Evaluate impacted outputs
+def calculate_impacted_outputs()
+	global _WATERING_PLAN_
+	outputArray = []
+
+	for entry in _WATERING_PLAN_:
+		try:
+			outputArray[entry["output"]]
+		except IndexError:
+			outputArray.append(entry["output"])
+	
+	return outputArray
 
 # Startup procedure
 def startup():
-	global _DB_CON_;
-	global _BRIDGE_;
-	global _OUTPUTS_;
-	global _WATERING_PLAN_;
-
+	global _DB_CON_
+	global _BRIDGE_
+	global _OUTPUTS_
+	global _WATERING_PLAN_
+	global _STAY_IN_THE_LOOP_
 
 	# Prevent the main loop to be executed in case startup procedure fails
-	global _STAY_IN_THE_LOOP_ = false;
+	_STAY_IN_THE_LOOP_ = False;
 
 	# Ask RTC to align the system date
-	logging.debug('System datetime is ' + time.strftime('%m/%d/%Y %H:%M:%S'))
+	logging.debug('System datetime is %s' % time.strftime('%m/%d/%Y %H:%M:%S'))
 	logging.debug('Aligning the system with the RTC datetime...')
 	putValue('align_datetime','1')
-	logging.debug("DELAY 2000...")
-	delay(2000);
+	logging.debug("sleep 2 seconds...")
+	sleep(2);
 	if getValue('align_datetime') != '0':
-		logging.error('ERROR: Onboard RTC doesn\'t respond')
+		logging.error("ERROR: Onboard RTC doesn't respond")
 		return None
 	else:
 		_datetime = getValue('datetime')
 			
-	logging.debug("System datetime post alignment is " + time.strftime('%m/%d/%Y %H:%M:%S'))
+	logging.debug("System datetime post alignment is %s" % time.strftime('%m/%d/%Y %H:%M:%S'))
 
 	# Retrieve the outputs
-	logging.info('Retrieving actuators...')
+	logging.info('Retrieving outputs...')
 	retrieve_outputs()
 	if len(_OUTPUTS_) == 0:
 		logging.warning('No actuator defined')
@@ -155,21 +189,21 @@ def startup():
 	# Retrieve the watering plan (only valid entries)
 	logging.info('Retrieving watering plan...')
 	retrieve_watering_plan()
-	if len(_EWATERING_PLAN_ == 0):
+	if len(_WATERING_PLAN_) == 0:
 		logging.warning('WARNING: No watering plan defined')
 		return None
 		
 	# Retrieve the watering plan (only valid entries)
-	logging.info('Get actuators impacted by the watering plan')
-	outputArray = calculate_impacted_actuators()
+	logging.info('Get outputs impacted by the watering plan')
+	outputArray = calculate_impacted_output()
 	if len(outputArray) == 0:
-		logging.warning('No actuator impacted by the defined watering plan')
+		logging.warning('No output impacted by the defined watering plan')
 		return None
 	else:
-		logging.info('The watering plan impacts %i actuator(s)' % len(outputArray))
+		logging.info('The watering plan impacts %i output(s)' % len(outputArray))
 
 	# Startup procedure completed successfully
-	_STAY_IN_TH_LOOP_ = True
+	_STAY_IN_THE_LOOP_ = True
 	return outputArray
 
 
@@ -195,19 +229,19 @@ try:
 	# Startup process
 	#
 	logging.info('Calling the startup procedure...')
-    global _STAY_IN_THE_LOOP_ = True
-    _outputArray = startup()
+	_STAY_IN_THE_LOOP_ = True
+	_outputArray = startup()
 
 	#
-	# Main loop
+	# Main loop
 	#
-    if _STAY_IN_THE_LOOP_:
+	if _STAY_IN_THE_LOOP_:
 		logging.info('Running the main loop...')
-    while _STAY_IN_THE_LOOP_:
+	#while _STAY_IN_THE_LOOP_:
 
 
 	cur = _DB_CON_.cursor()
-	cur.execute('SELECT * from actuators')
+	cur.execute('SELECT * from outputs')
 
 	rows = cur.fetchall()
 
