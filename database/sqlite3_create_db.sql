@@ -11,7 +11,7 @@ CREATE INDEX idx_settings ON settings (
     name
 );
 
-INSERT INTO [settings] ([name], [int_value]) VALUES ('actuators_number', 4);
+INSERT INTO [settings] ([name], [int_value]) VALUES ('outputs_number', 4);
 
 -- Table: sensors_log
 CREATE TABLE sensors_log (
@@ -24,30 +24,30 @@ CREATE TABLE sensors_log (
     luminosity          NUMERIC( 6, 0 )
 );
 
--- Table: actuators
-CREATE TABLE actuators (
+-- Table: outputs
+CREATE TABLE outputs (
     id                  INTEGER         PRIMARY KEY AUTOINCREMENT,
     sketch_name         VARCHAR( 150 )  NOT NULL UNIQUE
 );
 
-INSERT INTO [actuators] ([id], [sketch_name]) VALUES (1, 'OUTPUT1');
-INSERT INTO [actuators] ([id], [sketch_name]) VALUES (2, 'OUTPUT2');
-INSERT INTO [actuators] ([id], [sketch_name]) VALUES (3, 'OUTPUT3');
-INSERT INTO [actuators] ([id], [sketch_name]) VALUES (4, 'OUTPUT4');
+INSERT INTO [outputs] ([id], [sketch_name]) VALUES (1, 'OUTPUT1');
+INSERT INTO [outputs] ([id], [sketch_name]) VALUES (2, 'OUTPUT2');
+INSERT INTO [outputs] ([id], [sketch_name]) VALUES (3, 'OUTPUT3');
+INSERT INTO [outputs] ([id], [sketch_name]) VALUES (4, 'OUTPUT4');
 
--- Table: actuators_log
-CREATE TABLE actuators_log (
+-- Table: outputs_log
+CREATE TABLE outputs_log (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]	            DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
-    actuator            INTEGER          REFERENCES actuators ( id ) NOT NULL,
+    output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
     boolean_value       BOOLEAN,
     int_value           INTEGER,
     string_value        VARCHAR( 64 )
 );
 
--- Index: idx_actuators_log
-CREATE INDEX idx_actuators_log ON actuators_log (
-    actuator
+-- Index: idx_outputs_log
+CREATE INDEX idx_outputs_log ON outputs_log (
+    output
 );
 
 -- Table: actions
@@ -74,7 +74,7 @@ CREATE TABLE actions_log (
 -- Table: watering_plan
 CREATE TABLE watering_plan (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
-    actuator            INTEGER          REFERENCES actuators ( id ) NOT NULL,
+    output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
     [from]              DATETIME         NOT NULL,
     duration            INTEGER          NOT NULL,
     weekdays_bitmask    VARCHAR( 8 )     DEFAULT ('01111111') NOT NULL,

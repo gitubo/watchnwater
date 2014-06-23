@@ -100,8 +100,27 @@ def sendValue(_key, _value):
 
 ##################
 # Startup procedure
+#   Following the definition of the startup() procedure
+#   and all the functions used inside it
 ##################
 
+# Retrieve the outputs
+def retrieve_outputs():
+	global _OUTPUTS_ = None
+
+	cur = _DB_CON_.cursor()
+	cur.execute('SELECT id, sketch_name FROM outputs')
+	rows = cur.fetchall()
+
+	for row in rows:
+		logging.debug('OutputID = %i -> sketch_name = \'%s\'' % row[0], row[1])
+		output = {"id":row[0], "sketchName":row[1]}
+		global _OUTPUTS_.append(output) 
+	
+	logging.debug('Retrieved %i output(s)' % len(_OUTPUTS_))
+
+
+# Startup procedure
 def startup():
 	global _DB_CON_;
 	global _BRIDGE_;
@@ -113,18 +132,18 @@ def startup():
 	global _STAY_IN_THE_LOOP_ = false;
 
 	# Ask RTC to align the system date
-	logging.debug('System datetime is ' + time.strftime('%m/%d/%Y %H:%M:%S'));
-	logging.debug('Aligning the system with the RTC datetime...');
-	putValue('align_datetime','1');
-	logging.debug("DELAY 2000...");
+	logging.debug('System datetime is ' + time.strftime('%m/%d/%Y %H:%M:%S'))
+	logging.debug('Aligning the system with the RTC datetime...')
+	putValue('align_datetime','1')
+	logging.debug("DELAY 2000...")
 	delay(2000);
 	if getValue('align_datetime') != '0':
-		logging.error('ERROR: Onboard RTC doesn\'t respond');
+		logging.error('ERROR: Onboard RTC doesn\'t respond')
 		return None
 	else:
 		_datetime = getValue('datetime')
 			
-	logging.debug("System datetime post alignment is " + time.strftime('%m/%d/%Y %H:%M:%S'));
+	logging.debug("System datetime post alignment is " + time.strftime('%m/%d/%Y %H:%M:%S'))
 
 	# Retrieve the outputs
 	logging.info('Retrieving actuators...')
