@@ -27,22 +27,20 @@ CREATE TABLE sensors_log (
 -- Table: outputs
 CREATE TABLE outputs (
     id                  INTEGER         PRIMARY KEY AUTOINCREMENT,
-    sketch_name         VARCHAR( 150 )  NOT NULL UNIQUE
+    description         VARCHAR( 150 )  NOT NULL UNIQUE
 );
 
-INSERT INTO [outputs] ([id], [sketch_name]) VALUES (1, 'OUTPUT1');
-INSERT INTO [outputs] ([id], [sketch_name]) VALUES (2, 'OUTPUT2');
-INSERT INTO [outputs] ([id], [sketch_name]) VALUES (3, 'OUTPUT3');
-INSERT INTO [outputs] ([id], [sketch_name]) VALUES (4, 'OUTPUT4');
+INSERT INTO [outputs] ([id], [description]) VALUES (0, 'output0');
+INSERT INTO [outputs] ([id], [description]) VALUES (1, 'output1');
+INSERT INTO [outputs] ([id], [description]) VALUES (2, 'output2');
+INSERT INTO [outputs] ([id], [description]) VALUES (3, 'output3');
 
 -- Table: outputs_log
 CREATE TABLE outputs_log (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]	            DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
     output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
-    boolean_value       BOOLEAN,
-    int_value           INTEGER,
-    string_value        VARCHAR( 64 )
+    value		        BOOLEAN	         NOT NULL
 );
 
 -- Index: idx_outputs_log
@@ -77,7 +75,13 @@ CREATE TABLE watering_plan (
     output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
     [from]              DATETIME         NOT NULL,
     duration            INTEGER          NOT NULL,
-    weekdays_bitmask    VARCHAR( 8 )     DEFAULT ('01111111') NOT NULL,
+    weekdays_bitmask    VARCHAR( 8 )     DEFAULT ('11111110') NOT NULL,
     is_valid            BOOLEAN          DEFAULT ( 1 ) NOT NULL,
     is_forced           BOOLEAN          DEFAULT ( 0 ) NOT NULL
 );
+
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-01 07:00:00', 5);
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-01 19:00:00', 5);
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (1, '2014-01-01 07:05:00', 5);
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (2, '2014-01-01 07:10:00', 5);
+

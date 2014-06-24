@@ -9,20 +9,13 @@
 #define DHTTYPE DHT22 
 #define LEDPIN 13
 
-#define OUTPUT_NUMBER 4
-#define OUTPUT1 1
-#define OUTPUT2 2
-#define OUTPUT3 3
-#define OUTPUT4 4
-#define OUTPUT1_PIN 4
-#define OUTPUT2_PIN 5
-#define OUTPUT3_PIN 6
-#define OUTPUT4_PIN 7
+//Output definitions
+const int outputPin[] = {4, 5, 6, 7};
 
+//Global variables
 DHT dht(DHTPIN, DHTTYPE);
 RTC_DS1307 rtc;
 Adafruit_BMP085 bmp;
-
 
 void setup() {
   // Prepare the onboard led to blink once and then stay on 
@@ -45,9 +38,7 @@ void setup() {
   rtc.begin();
   if (! rtc.isrunning()) {
     log("ERROR: RTC does not work correctly.");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  } else {
-    setSystemDateTime(rtc.now());
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 
   // initialize DHT sensor
@@ -60,6 +51,19 @@ void setup() {
 	 log("ERROR: BMP180 does not work correctly.");
   }
 
+  //Publish current output status
+  int outputsNumber = sizeof(outputPin) / sizeof(int);
+  for(int i=0; i < outputsNumber; i++) {
+    pinMode(outputPin[i], OUTPUT);
+    digitalWrite(outputPin[i], LOW);
+  }
+  String _response = "";
+  for(int i=0; i < outputsNumber; i++)
+    _response += String(digitalRead(outputPin[i]));
+  Bridge.put("outputResponse", _response);
+  for(int i=0; i < outputsNumber; i++) {
+    log("Output Pin "+String(outputPin[i]) + " value " + String(digitalRead(outputPin[i])));
+  }
   // Setup procedure complete
   digitalWrite(LEDPIN, LOW);
 }
@@ -67,31 +71,35 @@ void setup() {
 void loop() {
   digitalWrite(LEDPIN, HIGH);
 
+  // Read timestamp
   DateTime now = rtc.now();
+  String _timestamp = formattedDateTime(now);
+  log("Timestamp: " + _timestamp); 
 
   //Check if a pin status has to be changed to LOW
-  char _output[2];
-  int output;
-  for(int i=0; i < OUTPUT_NUMBER; i++){
-    String key = "OUTPUT" + i;
-    Bridge.get(key.c_str(), _output, 2);
-    output = atoi(_output);
-    output = changeOutput(i, output);
-    Bridge.put(key, String(output));
+  int outputsNumber = sizeof(outputPin) / sizeof(int);
+  String _response = "";
+  for(int i=0; i < outputsNumber; i++)
+    _response += "x";
+  Bridge.put("outputResponse", _response);
+  char* _output;
+  _output = (char *) malloc(outputsNumber);
+  String key = "outputRequest";
+  if(Bridge.get(key.c_str(), _output, outputsNumber) != 0) {
+    for(int i=0; i < outputsNumber; i++){
+      if (_output[i]=='0')
+        digitalWrite(outputPin[i], LOW);
+      else
+        digitalWrite(outputPin[i], HIGH);
+      log("Output Pin "+String(outputPin[i]) + " value " + _output[i]);
+    }
   }
-
-  //Check if a reset of system datetime is needed
-  char _align_datetime[1];
-  Bridge.get("align_datetime", _align_datetime, 1);
-  int align_datetime = atoi(_align_datetime);
-  if(align_datetime != 0){
-    setSystemDateTime(now);
-    Bridge.put(String("align_datetime"), String("0"));
-  }
-
-  // Read timestamp
-  String _timestamp = formattedDateTime(now);
-  log("Timestamp from the RTC module: " + _timestamp); 
+  free(_output);
+  _response = "";
+  for(int i=0; i < outputsNumber; i++)
+    _response += String(digitalRead(outputPin[i]));
+  Bridge.put("outputResponse", _response);
+  log("Output: " + _response); 
   
   // Read humidity and temperature from dht sensor
   float _humidity = dht.readHumidity();
@@ -116,6 +124,7 @@ void loop() {
   }
   
   //Make sensors info available
+  Bridge.put(String("datetime"), _timestamp);
   Bridge.put(String("timestamp"), _timestamp);
   Bridge.put(String("temperature"), String(_temperature));
   Bridge.put(String("humidity"), String(_humidity));
@@ -127,61 +136,6 @@ void loop() {
   
   //Wait one second
   delay(1000);
-}
-
-int changeOutput(int _output, int _value){
-  switch(_output){
-    case OUTPUT1:
-      if(_value == LOW)
-        digitalWrite(OUTPUT1_PIN, LOW);
-      else
-        digitalWrite(OUTPUT1_PIN, HIGH);
-      return digitalRead(OUTPUT1_PIN);
-    case OUTPUT2:
-      if(_value == LOW)
-        digitalWrite(OUTPUT2_PIN, LOW);
-      else
-        digitalWrite(OUTPUT2_PIN, HIGH);
-      return digitalRead(OUTPUT2_PIN);
-    case OUTPUT3:
-      if(_value == LOW)
-        digitalWrite(OUTPUT3_PIN, LOW);
-      else
-        digitalWrite(OUTPUT3_PIN, HIGH);
-      return digitalRead(OUTPUT3_PIN);
-    case OUTPUT4:
-      if(_value == LOW)
-        digitalWrite(OUTPUT4_PIN, LOW);
-      else
-        digitalWrite(OUTPUT4_PIN, HIGH);
-      return digitalRead(OUTPUT4_PIN);
-    default:
-      return 2;
-  }
-}
-
-void setSystemDateTime(DateTime _now){
-    String unixDateTime = unixFormattedDateTime(_now);
-    log("Set system date according to the onboard RTC (" + String(unixDateTime) + ")");
-    Process p;            
-    p.begin("echo arduino | sudo date");      
-    p.addParameter(unixDateTime); 
-    p.run();
-
-}
-
-String unixFormattedDateTime(DateTime now){
-  // Assumed syntax : [MMDDhhmm[[CC]YY][.ss]]
-  String retval = "";
-  retval += print2Char(now.month());
-  retval += print2Char(now.day());
-  retval += print2Char(now.hour());
-  retval += print2Char(now.minute());
-  if(now.year()>99) retval += now.year();
-  else retval += "20" + now.year();
-  retval += ".";
-  retval += print2Char(now.second());
-  return retval;
 }
 
 String formattedDateTime(DateTime now){
