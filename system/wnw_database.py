@@ -15,20 +15,19 @@ class WnWDatabaseConnection:
 
 	def __init__(self):
 		self.dbConnection = None
-		self.returnMessage = ''
+		self.errorMessage = ''
 
 	def init(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		if not self.dbConnection:
 			self.dbConnection = lite.connect(DB_FILENAME)
 			if not self.dbConnection:
-				self.returnMessage = 'Database not accessible.'				
+				self.errorMessage = 'Database not accessible.'				
 				return False
 			else:
-				self.returnMessage = 'Database connection established.'
 				return True
 		else:
-			self.returnMessage = 'Database connection already established'
+			self.errorMessage = 'Database connection already established'
 			return False
 
 	def close(self):
@@ -36,7 +35,7 @@ class WnWDatabaseConnection:
 		if self.dbConnection:
 			self.dbConnection.close()
 			
-	def getReturnMessage(self):
+	def getErrorMessage(self):
 		return self.returnMessage
 			
 	def getOutputsNumber(self):
@@ -47,7 +46,7 @@ class WnWDatabaseConnection:
 			count = cur.fetchone()[0]
 			return count
 		except Exception as error:
-			self.returnMessage = 'SQLite3 execution exception: ' + str(error)
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return DBERROR_INVALID_COUNT
 			
 	def getWateringPlan(self):
@@ -67,7 +66,7 @@ class WnWDatabaseConnection:
 			
 			return _retArray
 		except Exception as error:
-			self.returnMessage = 'SQLite3 execution exception: ' + str(error)
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return None
 			
 	def putOutputStatus(self, _status):
@@ -78,6 +77,6 @@ class WnWDatabaseConnection:
 			self.dbConnection.commit()
 			return True
 		except Exception as error:
-			self.returnMessage = 'SQLite3 execution exception: ' + str(error)
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
 	

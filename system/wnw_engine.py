@@ -92,43 +92,20 @@ def putValue(_key, _value):
 #   and all the functions used inside it
 ##################
 
-#
-# Get the current status of the output:
-# 0 = inactive
-# 1 = active
-#
-def getCurrentStatus(_output):
-	_retVal = theBridge.getValue('outputResponse')
-	if _retVal == None: 
-		return None
-	else:
-		if len(_retVal) < _output+1:
-			logging.error("You are asking the status of an output that is not accessible (output=%d,outputResponse='%s'" %(_output,_retVal))
-		else:
-			if _retVal[_output] == '0':
-				return 0
-			else:
-				return 1
-		return None
-
-##########################
-# DB functions
-##########################
-
 # Retrieve the outputs
-def retrieve_outputs():
+def retrieveOutputs():
 	global _OUTPUTS_NUMBERS_
 	global theDB
 
 	_OUTPUTS_NUMBERS_ = theDB.getOutputsNumber()
 	if _OUTPUTS_NUMBERS_ == wnwDB.DBERROR_INVALID_COUNT:
-		logging.error('Invalid count of outputs coming from the DB (%s)' % theDB.getReturnMessage())
+		logging.error('Invalid count of outputs coming from the DB (%s)' % theDB.getErrorMessage())
 		_OUTPUT_NUMBERS_ = 0
 	else:	
 		logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBERS_)
 
 # Retrieve watering plan
-def retrieve_watering_plan():
+def retrieveWateringPlan():
 	global _WATERING_PLAN_
 	global theDB
 	
@@ -136,7 +113,7 @@ def retrieve_watering_plan():
 	if _WATERING_PLAN_ != None:
 		logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
 	else:
-		logging.error('Invalid watering plan coming from the DB (%s)' % theDB.getReturnMessage())
+		logging.error('Invalid watering plan coming from the DB (%s)' % theDB.getErrorMessage())
 		_WATERING_PLAN_ = []			
 
 # Store output current status 
@@ -155,7 +132,7 @@ def storeOutputStatus(_request):
 		logging.debug('Inserted %i record(s)' % len(rows))	
 		return len(rows)
 	else:
-		logging.error('Output status not saved into the DB (%s)' % theDB.getReturnMessage())
+		logging.error('Output status not saved into the DB (%s)' % theDB.getErrorMessage())
 		return None
 
 
@@ -181,14 +158,14 @@ def startup():
 
 	# Retrieve the outputs
 	logging.info('Retrieving outputs...')
-	retrieve_outputs()
+	retrieveOutputs()
 	if _OUTPUTS_NUMBERS_ == 0:
 		logging.warning('No actuator defined')
 		return False
 
 	# Retrieve the watering plan (only valid entries)
 	logging.info('Retrieving watering plan...')
-	retrieve_watering_plan()
+	retrieveWateringPlan()
 	if len(_WATERING_PLAN_) == 0:
 		logging.warning('No watering plan defined')
 		return False
@@ -202,19 +179,34 @@ def startup():
 ##################
 
 #
+# Get the current status of the output:
+# 0 = inactive
+# 1 = active
+#
+def getCurrentStatus(_output):
+	_retVal = theBridge.getValue('outputResponse')
+	if _retVal == None: 
+		return None
+	else:
+		if len(_retVal) < _output+1:
+			logging.error("You are asking the status of an output that is not accessible (output=%d,outputResponse='%s'" %(_output,_retVal))
+		else:
+			if _retVal[_output] == '0':
+				return 0
+			else:
+				return 1
+		return None
+
+
+#
 # Get the status of the actuator as it is supposed to be
 # according to the watering plan:
 # 0 = inactive
 # 1 = active
 # 2 = active (is_forced = true)
 #
-def getExpectedStatus(_output):
+def getExpectedStatus(_output, _minutes):
 	global _WATERING_PLAN_
-	
-	# Calculate the number of minutes from midnight 
-	_hour = int(time.strftime('%H')); _minute = int(time.strftime('%M'))
-	_minutes = _hour * 60 + _minute;	
-	logging.debug('Current time is %i:%i' % (_hour,_minute))
 	
 	# Scroll the watering plan and check if this specific actuator is supposed to be activated now
 	for wp in _WATERING_PLAN_:
@@ -278,10 +270,17 @@ try:
 	#
 	theDB = wnwDB.WnWDatabaseConnection()
 	logging.info('Connecting to the DB...')
-	if theDB.init()
+	if theDB.init():
+		logging.info('DB connection established')
+	else:
+		logging.error('DB connection not established: %s' % theDB.getErrorMessage())
+		
 	theBridge = wnwBridge.WnWBridge()
 	logging.info('Connecting to the Bridge...')
-	theBridge.init()
+	if theBridge.init():
+		logging.info('Bridge connection established')
+	else:
+		logging.error('Bridge connection not established: %s' % theBridge.getErrorMessage())
 	
 	#
 	# Startup process
@@ -299,6 +298,11 @@ try:
 		
 	while _STAY_IN_THE_LOOP_:
 		
+		# Calculate the number of minutes from midnight 
+		_hour = int(time.strftime('%H')); _minute = int(time.strftime('%M'))
+		_minutes = _hour * 60 + _minute;	
+		logging.debug('Current time is %i:%i' % (_hour,_minute))
+	
 		# Reset output string to send to the sketch
 		_request = ''
 		
@@ -308,7 +312,7 @@ try:
 			_currentStatus = getCurrentStatus(_output)
     		
 			# Check the expected status of this actuator
-			_expectedStatus = getExpectedStatus(_output)
+			_expectedStatus = getExpectedStatus(_output, _minutes)
 			
 			logging.debug('Evaluating output %i (current status = %i, expected status = %i)' %(_output, _currentStatus, _expectedStatus))
 

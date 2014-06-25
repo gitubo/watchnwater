@@ -14,30 +14,32 @@ class WnWBridge:
 
 	def __init__(self):
 		self.bridge = None
-		self.returnMessage = ''
+		self.errorMessage = ''
 		
 	def init(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		if not self.bridge:		
 			self.bridge = TCPJSONClient('127.0.0.1', 5700)
 		else:
-			self.returnMessage = 'Bridge connection already established'
+			self.errorMessage = 'Bridge connection already established'
 			return False
 		if self.putValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
-			self.returnMessage = 'Bridge connection established and tested'
 			return True
 		else:
-			self.returnMessage = 'Bridge connection established but test failed'
+			self.errorMessage = 'Bridge connection established but test failed'
 			return False
 
 	def close(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		if self.bridge:
 			self.bridge.close()
-			
+
+	def getErrorMessage(self):
+		return self.returnMessage			
+
 	def getValue(self, _key):
 		if self.bridge == None:
-			self.returnMessage = 'Bridge is not connected, establish connection before getting any value'
+			self.errorMessage = 'Bridge is not connected, establish connection before getting any value'
 			return False
 		self.bridge.send({'command':'get', 'key':_key})
 		timeout = 10;                                          
@@ -48,7 +50,7 @@ class WnWBridge:
 					if r['key'] == _key:                               
 						return str(r['value'])                       
 				except Exception as error:
-					self.returnMessage = 'Bridge execution exception: ' + str(error)
+					self.errorMessage = 'Bridge execution exception: ' + str(error)
 					return False                                                  
 			timeout -= 0.1                                                            
 			sleep(0.1)
@@ -56,7 +58,7 @@ class WnWBridge:
 
 	def putValue(self, _key, _value):
 		if self.bridge == None:
-			self.returnMessage = 'Bridge is not connected, establish connection before setting any value'
+			self.errorMessage = 'Bridge is not connected, establish connection before setting any value'
 			return False
 		self.bridge.send({'command':'put', 'key':_key, 'value':_value})
 		timeout = 10;                                          
@@ -67,7 +69,7 @@ class WnWBridge:
 					if (r['key'] == _key and r['value'] == _value):                               
 						return r['value']                               
 				except Exception as error:
-					self.returnMessage = 'Bridge execution exception: ' + str(error)
+					self.errorMessage = 'Bridge execution exception: ' + str(error)
 					return False                                                  
 			timeout -= 0.1                                                            
 			sleep(0.1)
