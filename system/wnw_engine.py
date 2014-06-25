@@ -9,26 +9,27 @@
 
 VERBOSE = 1
 LOG_FILENAME = '/mnt/sda1/wnw/log/engine.log'
-DB_FILENAME = '/mnt/sda1/wnw/wnwdb.sqlite'
-BRIDGECLIENT_DIR = '/usr/lib/python2.7/bridge/'
 SUCCESS = 0
 GENERIC_ERROR = 1
 SOIL_MOISTURE_SENSOR = 0
 SOIL_MOISTURE_THRESHOLD = 1000
-BRIDGE_TEST_KEY = 'bridgeTestKey'
-BRIDGE_TEST_VALUE = 'bridgeTestValue'
 
 import sqlite3 as lite
 import sys
 import os
 import time
 import logging
-sys.path.insert(0, BRIDGECLIENT_DIR) 
+#sys.path.insert(0, BRIDGECLIENT_DIR) 
 from time import sleep
 import subprocess
 
-_DB_CON_ = None
-_BRIDGE_ = None
+import wnw_database as wnwDB
+import wnw_bridge as wnwBridge
+
+theDB = None
+theBridge = None
+
+#_BRIDGE_ = None
 _STAY_IN_THE_LOOP_ = False
 _OUTPUTS_NUMBER_ = 0
 _WATERING_PLAN_ = None
@@ -36,21 +37,6 @@ _WATERING_PLAN_ = None
 ########################
 # Functions definition #
 ########################
-
-def initDB():
-	global _DB_CON_
-	if not _DB_CON_:
-		logging.info('Connecting to the DB (%s)...' % DB_FILENAME)
-		_DB_CON_ = lite.connect(DB_FILENAME)
-		if not _DB_CON_:
-			logging.error('Database not accessible. Exiting...')
-			sys.exit(1)
-		else:
-			logging.info('Database connection established.')
-	else:
-		logging.warning('Database connection already established')
-		sys.exit(1)
-
 
 def initBridge():
 	global _BRIDGE_
@@ -62,7 +48,7 @@ def initBridge():
 		logging.warning('Bridge connection already established')
 		sys.exit(1)
 	logging.info('Bridge connection established.')
-	if putValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
+	if theBridge.putValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
 		logging.info('Bridge test: success.')
 	else:
 		logging.error('Bridge test: failed. Exiting...')
@@ -112,7 +98,7 @@ def putValue(_key, _value):
 # 1 = active
 #
 def getCurrentStatus(_output):
-	_retVal = getValue('outputResponse')
+	_retVal = theBridge.getValue('outputResponse')
 	if _retVal == None: 
 		return None
 	else:
@@ -125,54 +111,63 @@ def getCurrentStatus(_output):
 				return 1
 		return None
 
+##########################
+# DB functions
+##########################
+
 # Retrieve the outputs
 def retrieve_outputs():
 	global _OUTPUTS_NUMBERS_
-	_OUTPUTS_NUMBERS_ = 0
-	
-	try:
-		cur = _DB_CON_.cursor()
-		cur.execute('SELECT count(id) FROM outputs')
-		rows = cur.fetchall()
-		for row in rows:
-			_OUTPUTS_NUMBERS_ = row[0]
-	except Exception as error:
-		logging.error("SQLite3 execution exception: %s" % error)
-		
-	logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBERS_)
+	global theDB
+
+	_OUTPUTS_NUMBERS_ = theDB.getOutputsNumber()
+	if _OUTPUTS_NUMBERS_ == wnwDB.DBERROR_INVALID_COUNT:
+		logging.error('Invalid count of outputs coming from the DB (%s)' % theDB.getReturnMessage())
+		_OUTPUT_NUMBERS_ = 0
+	else:	
+		logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBERS_)
 
 # Retrieve watering plan
 def retrieve_watering_plan():
 	global _WATERING_PLAN_
-	_WATERING_PLAN_ = []
+	global theDB
+	
+	_WATERING_PLAN_ = theDB.getWateringPlan()
+	if _WATERING_PLAN_ != None:
+		logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
+	else:
+		logging.error('Invalid watering plan coming from the DB (%s)' % theDB.getReturnMessage())
+		_WATERING_PLAN_ = []			
 
-	cur = _DB_CON_.cursor()
-	query = "SELECT id, output, strftime('%H:%M', [from]) as start_time, duration, weekdays_bitmask, is_forced FROM watering_plan"
-	query += " WHERE is_valid = 1"	
-	try:
-		cur.execute(query)
-		rows = cur.fetchall()
+# Store output current status 
+def storeOutputStatus(_request):
+	global _OUTPUTS_NUMBERS_
+	
+	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+	
+	_outputRange = range(0,_OUTPUTS_NUMBERS_)
+	rows = []
+	for i in _outputRange:
+		row = [_timestamp, i, _request[i]]
+		rows.append(row)
 
-		for row in rows:
-			logging.debug("PlanID = %i -> outputID = %i -> @ %s, duration %i min(s), weekdays '%s' (forced = %i)" % (row[0], row[1], row[2], row[3], row[4], row[5]))
-			item = {"output":row[1], "startTime":row[2], "duration":row[3], "weekdays":row[4], "isForced":row[5]}
-			_WATERING_PLAN_.append(item)
-	except Exception as error:
-		logging.error("SQLite3 execution exception: %s" % error)
-		
-	logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
+	if theDB.putOutputStatus(rows) == True:
+		logging.debug('Inserted %i record(s)' % len(rows))	
+		return len(rows)
+	else:
+		logging.error('Output status not saved into the DB (%s)' % theDB.getReturnMessage())
+		return None
+
 
 # Startup procedure
 def startup():
-	global _DB_CON_
-	global _BRIDGE_
 	global _OUTPUTS_NUMBERS_
 	global _WATERING_PLAN_
 
 	# Ask RTC to align the system date
 	logging.debug('System datetime is %s' % time.strftime('%m/%d/%Y %H:%M:%S'))
 	logging.debug('Aligning the system with the RTC datetime...')
-	_datetime = getValue('datetime') # Returned format: MM/DD/YYYY hh:mm:ss
+	_datetime = theBridge.getValue('datetime') # Returned format: MM/DD/YYYY hh:mm:ss
 	if _datetime == None:
 		logging.error("Onboard RTC doesn't respond")
 		return False
@@ -216,6 +211,11 @@ def startup():
 def getExpectedStatus(_output):
 	global _WATERING_PLAN_
 	
+	# Calculate the number of minutes from midnight 
+	_hour = int(time.strftime('%H')); _minute = int(time.strftime('%M'))
+	_minutes = _hour * 60 + _minute;	
+	logging.debug('Current time is %i:%i' % (_hour,_minute))
+	
 	# Scroll the watering plan and check if this specific actuator is supposed to be activated now
 	for wp in _WATERING_PLAN_:
 	
@@ -224,11 +224,7 @@ def getExpectedStatus(_output):
 			if _weekday == 0:
 				_weekday == 7 # 1 (for Monday) through 7 (for Sunday)
 				
-			if str(wp['weekdays'])[(int(_weekday))-1] != '0': # is the right day of the week?
-				# Calculate the number of minutes from midnight 
-				_hour = int(time.strftime('%H')); _minute = int(time.strftime('%M'))
-				_minutes = _hour * 60 + _minute;
-				logging.debug('Minutes from midnight = %i (%i:%i)' % (_minutes,_hour,_minute))
+			if str(wp['weekdays'])[(int(_weekday))-1] != '0': # is the right day of the week?	
 				# Calculate the number of minutes from midnight of the record in watering plan
 				logging.debug('StartTime %s, duration %i' % (str(wp['startTime']),int(wp['duration'])))
 				_hour = int(str(wp['startTime'])[0:2]); _minute = int(str(wp['startTime'])[3:5])
@@ -242,8 +238,7 @@ def getExpectedStatus(_output):
 						return 2
 					else:
 						return 1
-	else:
-		return 0
+	return 0
 
 def evaluateTurningOnOutput(_output):
 	if SOIL_MOISTURE_SENSOR == True:
@@ -267,27 +262,6 @@ def evaluateTurningOnOutput(_output):
 	# The output must be turned on
 	return True
 
-##################
-# DB insert function 
-##################
-def store_output_status(_request):
-	global _OUTPUTS_NUMBERS_
-	global _DB_CON_
-	
-	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-	
-	_outputRange = range(0,_OUTPUTS_NUMBERS_)
-	rows = []
-	for i in _outputRange:
-		row = [_timestamp, i, _request[i]]
-		rows.append(row)
-
-	logging.debug('Trying to insert %i records' % len(rows))
-
-	cur = _DB_CON_.cursor()
-	cur.executemany('insert into outputs_log ([date], output, value) values (?,?,?)', rows )
-	_DB_CON_.commit()
-
 
 ##################
 # MAIN 
@@ -302,8 +276,12 @@ try:
 	# Connect to the database
 	# Connect to the bridge
 	#
-	initDB()
-	initBridge()
+	theDB = wnwDB.WnWDatabaseConnection()
+	logging.info('Connecting to the DB...')
+	if theDB.init()
+	theBridge = wnwBridge.WnWBridge()
+	logging.info('Connecting to the Bridge...')
+	theBridge.init()
 	
 	#
 	# Startup process
@@ -353,17 +331,17 @@ try:
 
 		# Sending the request to change the output 			
 		logging.info('Sending output request %s' % _request)
-		_retValue = putValue('outputRequest', _request)
+		_retValue = theBridge.putValue('outputRequest', _request)
 		if _retValue != _request:
 			logging.error('putValue not working as expected')
 		logging.debug('Sleeping for 2 seconds...')
 		sleep(2)
-		_returnValue = getValue('outputResponse')
+		_returnValue = theBridge.getValue('outputResponse')
 		logging.debug('outputResponse = %s' % _returnValue)
 
 		if _returnValue == _request:
 			logging.debug('Output change request correctly processed')
-			store_output_status(_request)
+			storeOutputStatus(_returnValue)
 		else:
 			logging.error("The output change request has not been correctly processed (request '%s', response '%s'" % (_request,_returnValue))
 	
@@ -371,18 +349,18 @@ try:
 		logging.debug('Sleep 30 seconds...')
 		sleep(30)
 
-except lite.Error, e:
+except Exception as e:
 
-	logging.error("Error %s:" % e.args[0])
+	logging.error("Exception %s:" % e.args[0])
 	sys.exit(1)
 
 finally:
 
-	if _DB_CON_:
+	if theDB:
 		logging.info('Closing DB connection...')
-		_DB_CON_.close()
-	if _BRIDGE_:
+		theDB.close()
+	if theBridge:
 		logging.info('Closing BRIDGE connection...')
-		_BRIDGE_.close()
+		theBridge.close()
 		
 
