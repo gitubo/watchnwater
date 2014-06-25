@@ -129,14 +129,16 @@ def getCurrentStatus(_output):
 def retrieve_outputs():
 	global _OUTPUTS_NUMBERS_
 	_OUTPUTS_NUMBERS_ = 0
-
-	cur = _DB_CON_.cursor()
-	cur.execute('SELECT count(id) FROM outputs')
-	rows = cur.fetchall()
-
-	for row in rows:
-		_OUTPUTS_NUMBERS_ = row[0]
 	
+	try:
+		cur = _DB_CON_.cursor()
+		cur.execute('SELECT count(id) FROM outputs')
+		rows = cur.fetchall()
+		for row in rows:
+			_OUTPUTS_NUMBERS_ = row[0]
+	except Exception as error:
+		logging.error("SQLite3 execution exception: %s" % error)
+		
 	logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBERS_)
 
 # Retrieve watering plan
@@ -160,29 +162,12 @@ def retrieve_watering_plan():
 		
 	logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
 
-# Evaluate impacted outputs
-def calculate_impacted_outputs():
-	global _WATERING_PLAN_
-	outputArray = []
-
-	for entry in _WATERING_PLAN_:
-		try:
-			outputArray[entry["output"]]
-		except IndexError:
-			outputArray.append(entry["output"])
-	
-	return outputArray
-
 # Startup procedure
 def startup():
 	global _DB_CON_
 	global _BRIDGE_
 	global _OUTPUTS_NUMBERS_
 	global _WATERING_PLAN_
-	global _STAY_IN_THE_LOOP_
-
-	# Prevent the main loop to be executed in case startup procedure fails
-	_STAY_IN_THE_LOOP_ = False;
 
 	# Ask RTC to align the system date
 	logging.debug('System datetime is %s' % time.strftime('%m/%d/%Y %H:%M:%S'))
@@ -190,7 +175,7 @@ def startup():
 	_datetime = getValue('datetime') # Returned format: MM/DD/YYYY hh:mm:ss
 	if _datetime == None:
 		logging.error("Onboard RTC doesn't respond")
-		return None
+		return False
 	else:
 		FNULL = open(os.devnull, 'w')
 		# Needed format [[[[[YY]YY]MM]DD]hh]mm[.ss]
@@ -204,27 +189,17 @@ def startup():
 	retrieve_outputs()
 	if _OUTPUTS_NUMBERS_ == 0:
 		logging.warning('No actuator defined')
-		return None
+		return False
 
 	# Retrieve the watering plan (only valid entries)
 	logging.info('Retrieving watering plan...')
 	retrieve_watering_plan()
 	if len(_WATERING_PLAN_) == 0:
 		logging.warning('No watering plan defined')
-		return None
+		return False
 		
-	# Retrieve the watering plan (only valid entries)
-	logging.info('Get outputs impacted by the watering plan')
-	outputArray = calculate_impacted_outputs()
-	if len(outputArray) == 0:
-		logging.warning('No output impacted by the defined watering plan')
-		return None
-	else:
-		logging.info('The watering plan impacts %i output(s)' % len(outputArray))
-
 	# Startup procedure completed successfully
-	_STAY_IN_THE_LOOP_ = True
-	return outputArray
+	return True
 
 ##################
 # Main Loop procedure
@@ -334,9 +309,7 @@ try:
 	# Startup process
 	#
 	logging.info('Calling the startup procedure...')
-	_STAY_IN_THE_LOOP_ = True
-	_outputArray = startup()
-	logging.debug('Output impacted = %s' % _outputArray)
+	_STAY_IN_THE_LOOP_ = startup()
 	
 	#
 	# Main loop
