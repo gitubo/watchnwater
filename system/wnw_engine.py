@@ -11,8 +11,9 @@ VERBOSE = 1
 LOG_FILENAME = '/mnt/sda1/wnw/log/engine.log'
 SUCCESS = 0
 GENERIC_ERROR = 1
-SOIL_MOISTURE_SENSOR = 0
+SOIL_MOISTURE_SENSOR = False
 SOIL_MOISTURE_THRESHOLD = 1000
+WEATHER_FORECAST = False
 
 import sqlite3 as lite
 import sys
@@ -29,62 +30,10 @@ import wnw_bridge as wnwBridge
 theDB = None
 theBridge = None
 
-#_BRIDGE_ = None
 _STAY_IN_THE_LOOP_ = False
 _OUTPUTS_NUMBER_ = 0
 _WATERING_PLAN_ = None
 
-########################
-# Functions definition #
-########################
-
-def initBridge():
-	global _BRIDGE_
-	if not _BRIDGE_:
-		logging.info('Connecting to the Bridge...')
-		from tcp import TCPJSONClient
-		_BRIDGE_ = TCPJSONClient('127.0.0.1', 5700)
-	else:
-		logging.warning('Bridge connection already established')
-		sys.exit(1)
-	logging.info('Bridge connection established.')
-	if theBridge.putValue(BRIDGE_TEST_KEY,BRIDGE_TEST_VALUE) == BRIDGE_TEST_VALUE:
-		logging.info('Bridge test: success.')
-	else:
-		logging.error('Bridge test: failed. Exiting...')
-		sys.exit(1)
-
-def getValue(_key):
-	global _BRIDGE_
-	_BRIDGE_.send({'command':'get', 'key':_key})
-	timeout = 10;                                          
-	while timeout>=0:                             
-		r = _BRIDGE_.recv()                      
-		if not r is None:                                                
-			try:                                 
-				if r['key'] == _key:                               
-					return str(r['value'])                       
-			except:                                             
-				pass                                                  
-		timeout -= 0.1                                                            
-		sleep(0.1)
-	return None                         
-
-def putValue(_key, _value):
-	global _BRIDGE_
-	_BRIDGE_.send({'command':'put', 'key':_key, 'value':_value})
-	timeout = 10;                                          
-	while timeout>=0:                             
-		r = _BRIDGE_.recv()                      
-		if not r is None:                                                
-			try:                                 
-				if (r['key'] == _key and r['value'] == _value):                               
-					return r['value']                               
-			except:                                             
-				pass                                                  
-		timeout -= 0.1                                                            
-		sleep(0.1)
-	return None                         
 
 ##################
 # Startup procedure
@@ -94,15 +43,15 @@ def putValue(_key, _value):
 
 # Retrieve the outputs
 def retrieveOutputs():
-	global _OUTPUTS_NUMBERS_
+	global _OUTPUTS_NUMBER_
 	global theDB
 
-	_OUTPUTS_NUMBERS_ = theDB.getOutputsNumber()
-	if _OUTPUTS_NUMBERS_ == wnwDB.DBERROR_INVALID_COUNT:
+	_OUTPUTS_NUMBER_ = theDB.getOutputsNumber()
+	if _OUTPUTS_NUMBER_ == wnwDB.DBERROR_INVALID_COUNT:
 		logging.error('Invalid count of outputs coming from the DB (%s)' % theDB.getErrorMessage())
 		_OUTPUT_NUMBERS_ = 0
 	else:	
-		logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBERS_)
+		logging.debug('Retrieved %i output(s)' % _OUTPUTS_NUMBER_)
 
 # Retrieve watering plan
 def retrieveWateringPlan():
@@ -118,27 +67,30 @@ def retrieveWateringPlan():
 
 # Store output current status 
 def storeOutputStatus(_request):
-	global _OUTPUTS_NUMBERS_
-	
 	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
 	
-	_outputRange = range(0,_OUTPUTS_NUMBERS_)
-	rows = []
-	for i in _outputRange:
-		row = [_timestamp, i, _request[i]]
-		rows.append(row)
-
-	if theDB.putOutputStatus(rows) == True:
-		logging.debug('Inserted %i record(s)' % len(rows))	
-		return len(rows)
+	if theDB.storeOutputStatus(_timestamp, _request) == True:
+		logging.debug('Output status stored into the DB')	
+		return True
 	else:
 		logging.error('Output status not saved into the DB (%s)' % theDB.getErrorMessage())
-		return None
+		return False
+
+# Store action related to the change of status of an output 
+def storeAction(_output, _action):
+	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+	
+	if theDB.storeAction(_timestamp, _output, _action) == True:
+		logging.debug('Action stored into the DB')	
+		return True
+	else:
+		logging.error('Action not saved into the DB (%s)' % theDB.getErrorMessage())
+		return False
 
 
 # Startup procedure
 def startup():
-	global _OUTPUTS_NUMBERS_
+	global _OUTPUTS_NUMBER_
 	global _WATERING_PLAN_
 
 	# Ask RTC to align the system date
@@ -159,7 +111,7 @@ def startup():
 	# Retrieve the outputs
 	logging.info('Retrieving outputs...')
 	retrieveOutputs()
-	if _OUTPUTS_NUMBERS_ == 0:
+	if _OUTPUTS_NUMBER_ == 0:
 		logging.warning('No actuator defined')
 		return False
 
@@ -184,19 +136,58 @@ def startup():
 # 1 = active
 #
 def getCurrentStatus(_output):
-	_retVal = theBridge.getValue('outputResponse')
-	if _retVal == None: 
+	_in_loop = True
+	_retVal = None
+	
+	while _in_loop == True:
+		_retVal = theBridge.getValue('outputResponse')
+		if _retVal == None: # value not found
+			_in_loop = False
+		elif len(_retVal) >= _output+1: #be sure the value is readable
+			if (_retVal[_output] == '0' or _retVal[_output] == '1'): # value not ready
+				_in_loop = False
+		
+	if _retVal == None:
 		return None
 	else:
-		if len(_retVal) < _output+1:
-			logging.error("You are asking the status of an output that is not accessible (output=%d,outputResponse='%s'" %(_output,_retVal))
+		if _retVal[_output] == '0':
+			return 0
+		elif _retVal[_output] == '1':
+			return 1
 		else:
-			if _retVal[_output] == '0':
-				return 0
-			else:
-				return 1
-		return None
+			logging.warning("Current status of output %d is not well defined ('%s') -> forced to LOW" %(_output,_retVal[_output]))
+			return 0
+	return None
 
+#
+# Get the current status of all the outputs:
+# 0 = inactive
+# 1 = active
+#
+def waitForOutputsResponse(_output_number):
+	_in_loop = True
+	_retVal = None
+	
+	while _in_loop == True:
+		_retVal = theBridge.getValue('outputResponse')
+		if _retVal == None: # value not found
+			_in_loop = False
+		elif len(_retVal) == _output_number: #be sure the value is readable
+			_counter = 0;
+			for x in range(0, _output_number):
+				if (_retVal[x] == '0' or _retVal[x] == '1'): # value ready
+					_counter += 1
+			if _counter == _output_number:
+				_in_loop = False
+		else:
+			logging.error("The expected number of output (%i) differs from the response (%i, '%s')" %(_output_number,len(_retVal)))
+			_retVal = None
+			_in_loop = False
+		
+	if _retVal == None:
+		return None
+	else:
+		return _retVal
 
 #
 # Get the status of the actuator as it is supposed to be
@@ -205,7 +196,7 @@ def getCurrentStatus(_output):
 # 1 = active
 # 2 = active (is_forced = true)
 #
-def getExpectedStatus(_output, _minutes):
+def getExpectedStatus(_output, _nowInSeconds):
 	global _WATERING_PLAN_
 	
 	# Scroll the watering plan and check if this specific actuator is supposed to be activated now
@@ -220,8 +211,8 @@ def getExpectedStatus(_output, _minutes):
 				# Calculate the number of minutes from midnight of the record in watering plan
 				logging.debug('StartTime %s, duration %i' % (str(wp['startTime']),int(wp['duration'])))
 				_hour = int(str(wp['startTime'])[0:2]); _minute = int(str(wp['startTime'])[3:5])
-				_minutesFrom = _hour * 60 + _minute;
-				if (_minutes >= _minutesFrom and _minutes <= (_minutesFrom + int(wp['duration'])) ): # is the right time?
+				_secondsFrom = _hour * 3600 + _minute * 60;
+				if (_nowInSeconds >= _secondsFrom and _nowInSeconds <= (_secondsFrom + int(wp['duration']) * 60) ): # is the right time?
 					logging.debug('Found a match in the watering plan:')
 					logging.debug(' -> output = %i' % wp['output'])
 					logging.debug(' -> weekday = %s (%s)' % (_weekday, wp['weekdays']))
@@ -297,40 +288,54 @@ try:
 		logging.warning('Nothing to do. Exiting...')
 		
 	while _STAY_IN_THE_LOOP_:
+	
+		# Get time to calculate loop duration
+		_loopStartTime = int(time.time() * 1000)
 		
 		# Calculate the number of minutes from midnight 
-		_hour = int(time.strftime('%H')); _minute = int(time.strftime('%M'))
-		_minutes = _hour * 60 + _minute;	
-		logging.debug('Current time is %i:%i' % (_hour,_minute))
+		_cHour = time.strftime('%H'); _cMinutes = time.strftime('%M'); _cSeconds = time.strftime('%S')
+		_nowInSeconds = int(_cHour) * 3600 + int(_cMinutes) * 60 + int(_cSeconds);	
+		logging.debug('Current time is %s:%s:%s' % (_cHour,_cMinutes,_cSeconds))
 	
 		# Reset output string to send to the sketch
 		_request = ''
 		
-		_outputRange = range(0,_OUTPUTS_NUMBERS_)
+		_outputRange = range(0,_OUTPUTS_NUMBER_)
 		for _output in _outputRange:
+			logging.debug('Evaluating output %i' % _output)
 			# Get the current status of the actuator
 			_currentStatus = getCurrentStatus(_output)
     		
 			# Check the expected status of this actuator
-			_expectedStatus = getExpectedStatus(_output, _minutes)
+			_expectedStatus = getExpectedStatus(_output, _nowInSeconds)
 			
-			logging.debug('Evaluating output %i (current status = %i, expected status = %i)' %(_output, _currentStatus, _expectedStatus))
+			logging.debug('Current status = %i => expected status = %i' %(_currentStatus, _expectedStatus))
 
 			if _expectedStatus == 0:
-				logging.debug('Turning OFF output %i ' % _output)
+				if _currentStatus != 0:
+					logging.debug('Turning OFF output %i ' % _output)
+					storeAction(_output, wnwDB.ACTION_TURNOFF_AS_PER_WATERING_PLAN)
 				_request += '0'
 			elif _expectedStatus == 1:
-				logging.debug('Considering to turn ON output %i' % _output)
 				if evaluateTurningOnOutput(_output) == True:
+					if _currentStatus != 1:
+						logging.debug('Turning ON output %i ' % _output)
+						storeAction(_output, wnwDB.ACTION_TURNON_AS_PER_WATERING_PLAN)
 					_request += '1'
 				else:
+					if _currentStatus != 0:
+						logging.debug('Turning OFF output %i ' % _output)
+						storeAction(_output, wnwDB.ACTION_TURNOFF_AFTER_EVALUATION)
 					_request += '0'
 			elif _expectedStatus == 2:
-				logging.debug('Turning ON output %i [FORCED]' % _output)
+				if _currentStatus != 1:
+					logging.debug('Turning ON output %i [FORCED]' % _output)
+					storeAction(_output, wnwDB.ACTION_TURNON_FORCED)
 				_request += '1'
 			else:
 				logging.warning('Unsupported expected status for output %i' % _output);
 				logging.warning('The output will be turned off!')
+				storeAction(_output, wnwDB.ACTION_TURNOFF_DEFAULT)
 				_request += '0'
 
 		# Sending the request to change the output 			
@@ -338,20 +343,28 @@ try:
 		_retValue = theBridge.putValue('outputRequest', _request)
 		if _retValue != _request:
 			logging.error('putValue not working as expected')
-		logging.debug('Sleeping for 2 seconds...')
-		sleep(2)
-		_returnValue = theBridge.getValue('outputResponse')
-		logging.debug('outputResponse = %s' % _returnValue)
 
-		if _returnValue == _request:
-			logging.debug('Output change request correctly processed')
-			storeOutputStatus(_returnValue)
+		_returnValue = waitForOutputsResponse(_OUTPUTS_NUMBER_)
+		if _returnValue == None:
+			logging.error('Output response not present')
 		else:
-			logging.error("The output change request has not been correctly processed (request '%s', response '%s'" % (_request,_returnValue))
+			logging.debug('outputResponse = %s' % _returnValue)
+
+			if _returnValue == _request:
+				logging.debug('Output change request correctly processed')
+			else:
+				logging.error("The output change request has not been correctly processed (request '%s', response '%s'" % (_request,_returnValue))
+		
+			# Store output status
+			storeOutputStatus(_returnValue)
 	
-		# Wait 30 seconds 
-		logging.debug('Sleep 30 seconds...')
-		sleep(30)
+		# Get time to calculate loop duration
+		logging.debug('Sleep...')
+		_loopStopTime = int(time.time() * 1000)
+		_durationInMillis = _loopStopTime - _loopStartTime
+		_to10Seconds = (10000.0 - float(_durationInMillis)) / 1000.0
+		if _to10Seconds > 0.0:
+			sleep(_to10Seconds)
 
 except Exception as e:
 

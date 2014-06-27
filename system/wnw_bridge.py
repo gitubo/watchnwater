@@ -51,10 +51,10 @@ class WnWBridge:
 						return str(r['value'])                       
 				except Exception as error:
 					self.errorMessage = 'Bridge execution exception: ' + str(error)
-					return False                                                  
+					return None                                                  
 			timeout -= 0.1                                                            
 			sleep(0.1)
-		return True                         
+		return None
 
 	def putValue(self, _key, _value):
 		if self.bridge == None:

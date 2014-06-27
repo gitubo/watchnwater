@@ -1,11 +1,12 @@
 import sqlite3 as lite
 
-DBSUCCESS = 0
-
-DBERROR_NOT_ACCESSIBLE = 1000
-DBERROR_CONNECTION_NOT_ESTABILISHED = 1100
-
-DBERROR_EXCEPTION = 2000
+ACTION_TURNOFF_DEFAULT = 0
+ACTION_TURNON_AS_PER_WATERING_PLAN = 1
+ACTION_TURNOFF_AS_PER_WATERING_PLAN = 2
+ACTION_TURNON_FORCED = 3
+ACTION_TURNOFF_FORCED = 4
+ACTION_TURNON_AFTER_EVALUATION= 5
+ACTION_TURNOFF_AFTER_EVALUATION = 6
 
 DBERROR_INVALID_COUNT = -1
 
@@ -31,15 +32,15 @@ class WnWDatabaseConnection:
 			return False
 
 	def close(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		if self.dbConnection:
 			self.dbConnection.close()
 			
 	def getErrorMessage(self):
-		return self.returnMessage
+		return self.errorMessage
 			
 	def getOutputsNumber(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		try:
 			cur = self.dbConnection.cursor()
 			cur.execute('SELECT count(id) FROM outputs')
@@ -50,7 +51,7 @@ class WnWDatabaseConnection:
 			return DBERROR_INVALID_COUNT
 			
 	def getWateringPlan(self):
-		self.returnMessage = ''
+		self.errorMessage = ''
 		try:
 			_retArray = []
 			cur = self.dbConnection.cursor()
@@ -69,14 +70,24 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return None
 			
-	def putOutputStatus(self, _status):
-		self.returnMessage = ''
+	def storeOutputStatus(self, _timestamp, _status):
+		self.errorMessage = ''
 		try:
 			cur = self.dbConnection.cursor()
-			cur.executemany('insert into outputs_log ([date], output, value) values (?,?,?)', _status )
+			cur.execute('insert into outputs_log ([date], output) values (?,?)', (_timestamp, _status) )
 			self.dbConnection.commit()
 			return True
 		except Exception as error:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
-	
+
+	def storeAction(self, _timestamp, _output, _actionid):
+		self.errorMessage = ''
+		try:
+			cur = self.dbConnection.cursor()
+			cur.execute('insert into actions_log ([date], output, [action]) values (?,?,?)', (_timestamp, _output, _actionid) )
+			self.dbConnection.commit()
+			return True
+		except Exception as error:
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
+			return False

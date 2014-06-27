@@ -37,15 +37,8 @@ INSERT INTO [outputs] ([id], [description]) VALUES (3, 'output3');
 
 -- Table: outputs_log
 CREATE TABLE outputs_log (
-    id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]	            DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
-    output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
-    value		        BOOLEAN	         NOT NULL
-);
-
--- Index: idx_outputs_log
-CREATE INDEX idx_outputs_log ON outputs_log (
-    output
+    output              VARCHAR( 32 )    NOT NULL
 );
 
 -- Table: actions
@@ -54,19 +47,20 @@ CREATE TABLE actions (
     description         VARCHAR( 128 )   NOT NULL
 );
 
+INSERT INTO [actions] ([id], [description]) VALUES (0, 'Turned OFF as default choise');
 INSERT INTO [actions] ([id], [description]) VALUES (1, 'Turned ON as per watering plan');
 INSERT INTO [actions] ([id], [description]) VALUES (2, 'Turned OFF as per watering plan');
 INSERT INTO [actions] ([id], [description]) VALUES (3, 'Turned ON [forced]');
 INSERT INTO [actions] ([id], [description]) VALUES (4, 'Turned OFF [forced]');
+INSERT INTO [actions] ([id], [description]) VALUES (5, 'Turned ON after evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (6, 'Turned OFF after evaluation');
 
 -- Table: actions_log
 CREATE TABLE actions_log (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]              DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
-    [action]            INTEGER          REFERENCES actions ( id ) NOT NULL,
-    [from]              DATETIME,
-    [to]                DATETIME,
-    note                VARCHAR( 128 )
+    output              INTEGER          REFERENCES outputs ( id ) NOT NULL,
+    [action]            INTEGER          REFERENCES actions ( id ) NOT NULL
 );
 
 -- Table: watering_plan
@@ -77,6 +71,7 @@ CREATE TABLE watering_plan (
     duration            INTEGER          NOT NULL,
     weekdays_bitmask    VARCHAR( 8 )     DEFAULT ('11111110') NOT NULL,
     is_valid            BOOLEAN          DEFAULT ( 1 ) NOT NULL,
+    is_oneshot          BOOLEAN          DEFAULT ( 0 ) NOT NULL,
     is_forced           BOOLEAN          DEFAULT ( 0 ) NOT NULL
 );
 

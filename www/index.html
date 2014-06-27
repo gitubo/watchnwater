@@ -1,0 +1,66 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+	<title>Homepage</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<link rel="stylesheet" href="js/jquery.mobile-1.4.2.min.css" />
+	<script src="js/jquery-1.11.1.min.js"></script>
+	<script src="js/jquery.mobile-1.4.2.min.js"></script>
+	<link rel="stylesheet" href="css/wnw.css" />
+</head> 
+<body> 
+
+<div data-role="page">
+
+	<div data-role="header">
+		<h1>Watch 'n' Water</h1>
+	</div><!-- /header -->
+
+	<div data-role="content">	
+    
+		<div data-role="collapsibleset" data-theme="a" data-content-theme="a"  data-iconpos="right" data-collapsed-icon="arrow-r" data-expanded-icon="arrow-d">
+            <div data-role="collapsible">
+                <h3>Watering plan</h3>
+            <p>Specify the open and close icons on the set to apply it to all the collapsibles within.</p>
+            </div>
+            <div data-role="collapsible">
+                <h3>Status of the outputs</h3>
+            	<table data-role="table" id="table-column-toggle" data-mode="columntoggle" class="ui-responsive table-stroke">
+     				<tbody>
+                    	<tr><th>Output 0</th><td>Active</td></tr>
+                        <tr><th>Output 1</th><td>Inactive</td></tr>
+                        <tr><th>Output 2</th><td>Inactive</td></tr>
+                        <tr><th>Output 3</th><td>Inactive</td></tr>
+       				</tbody>
+       			</table>
+            </div>
+            <div data-role="collapsible">
+                <h3>Values of the sensors</h3>
+                <table data-role="table" id="table-column-toggle" data-mode="columntoggle" class="ui-responsive table-stroke">
+     				<tbody>
+                    	<tr><th>Date and time</th><td>06/13/2014 16:54:20</td></tr>
+                        <tr><th>Temperature</th><td>23.7 *C</td></tr>
+                        <tr><th>Humidity</th><td>62.3 %</td></tr>
+                        <tr><th>Pressure</th><td>996.67 Pa</td></tr>
+       				</tbody>
+       			</table>
+            </div>
+  		</div>
+    
+    <!--
+      <ul data-role="listview" data-ajax="false" data-inset="true" data-theme="a">
+        <li data-role="list-divider">Choose:</li>
+        <li><a href="../pages/wateringPlan.html">Watering plan</a></li>
+        <li><a href="../pages/outputStatus.html">Output status</a></li>
+        <li><a href="../pages/sensorValues.html">Sensors values</a></li>
+      </ul>  
+    -->
+    
+	</div><!-- /content -->
+    
+
+
+</div><!-- /page -->
+
+</body>
+</html>
