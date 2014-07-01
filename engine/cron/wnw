@@ -1,0 +1,7 @@
+/mnt/sda1/wnw/log/*.log {
+   size 10240k
+   missingok
+   rotate 8
+   compress
+   notifempty
+}

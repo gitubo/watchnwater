@@ -76,6 +76,17 @@ def storeOutputStatus(_request):
 		logging.error('Output status not saved into the DB (%s)' % theDB.getErrorMessage())
 		return False
 
+# Store sensors' values 
+def storeSensorsValues(_temperature, _humidity, _pressure, _soilMoisture, _luminosity):
+	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+	
+	if theDB.storeSensorsValues(_timestamp, _temperature, _humidity, _pressure, _soilMoisture, _luminosity) == True:
+		logging.debug('Sensors values stored into the DB')	
+		return True
+	else:
+		logging.error('Sensors values not saved into the DB (%s)' % theDB.getErrorMessage())
+		return False
+
 # Store action related to the change of status of an output 
 def storeAction(_output, _action):
 	_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -129,7 +140,7 @@ def startup():
 # Main Loop procedure
 #   Following the definition of all the functions used inside it
 ##################
-
+	
 #
 # Get the current status of the output:
 # 0 = inactive
@@ -212,6 +223,7 @@ def getExpectedStatus(_output, _nowInSeconds):
 				logging.debug('StartTime %s, duration %i' % (str(wp['startTime']),int(wp['duration'])))
 				_hour = int(str(wp['startTime'])[0:2]); _minute = int(str(wp['startTime'])[3:5])
 				_secondsFrom = _hour * 3600 + _minute * 60;
+				logging.debug('_nowInSeconds=%i, _secondsFrom=%i, secondsTo=%i' % (_nowInSeconds, _secondsFrom, (_secondsFrom + int(wp['duration']) * 60)))
 				if (_nowInSeconds >= _secondsFrom and _nowInSeconds <= (_secondsFrom + int(wp['duration']) * 60) ): # is the right time?
 					logging.debug('Found a match in the watering plan:')
 					logging.debug(' -> output = %i' % wp['output'])
@@ -291,6 +303,9 @@ try:
 	
 		# Get time to calculate loop duration
 		_loopStartTime = int(time.time() * 1000)
+		
+		# Store output status
+		storeSensorsValues(theBridge.getValue('temperature'),theBridge.getValue('humidity'),theBridge.getValue('pressure'),theBridge.getValue('soilMoisture'),theBridge.getValue('luminosity'),)
 		
 		# Calculate the number of minutes from midnight 
 		_cHour = time.strftime('%H'); _cMinutes = time.strftime('%M'); _cSeconds = time.strftime('%S')

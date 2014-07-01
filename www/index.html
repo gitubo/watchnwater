@@ -19,48 +19,200 @@
 	<div data-role="content">	
     
 		<div data-role="collapsibleset" data-theme="a" data-content-theme="a"  data-iconpos="right" data-collapsed-icon="arrow-r" data-expanded-icon="arrow-d">
-            <div data-role="collapsible">
+            <div id="collapsible-watering-plan" data-role="collapsible">
                 <h3>Watering plan</h3>
-            <p>Specify the open and close icons on the set to apply it to all the collapsibles within.</p>
+                <table data-role="table" id="table-column-toggle-watering-plan" data-mode="columntoggle" class="ui-responsive table-stroke">
+					<thead>
+    					<tr>
+      						<th>Output</th>
+      						<th data-priority="1">Starts at</th>
+     					 	<th data-priority="2">Duration</th>
+      						<th data-priority="3">Days of the week</th>
+      						<th data-priority="4">Oneshot</th>
+      						<th data-priority="5">Forced</th>
+    					</tr>
+  					</thead>
+					<tbody id="table-column-toggle-watering-plan">
+					<tr><td>Not yet loaded</td></tr>
+					</tbody>
+				</table>
             </div>
-            <div data-role="collapsible">
+            <div id="collapsible-outputs" data-role="collapsible">
                 <h3>Status of the outputs</h3>
-            	<table data-role="table" id="table-column-toggle" data-mode="columntoggle" class="ui-responsive table-stroke">
-     				<tbody>
-                    	<tr><th>Output 0</th><td>Active</td></tr>
-                        <tr><th>Output 1</th><td>Inactive</td></tr>
-                        <tr><th>Output 2</th><td>Inactive</td></tr>
-                        <tr><th>Output 3</th><td>Inactive</td></tr>
+            	<table data-role="table" id="table-column-toggle-outputs" data-mode="columntoggle" class="ui-responsive table-stroke">
+					<thead>
+    					<tr>
+      						<th>Output</th>
+      						<th data-priority="1">Status</th>
+    					</tr>
+  					</thead>
+  	    			<tbody id="table-column-toggle-outputs">
+     				<tr><td>Not yet loaded</td></tr>
        				</tbody>
        			</table>
             </div>
-            <div data-role="collapsible">
+            <div id="collapsible-sensors" data-role="collapsible">
                 <h3>Values of the sensors</h3>
-                <table data-role="table" id="table-column-toggle" data-mode="columntoggle" class="ui-responsive table-stroke">
-     				<tbody>
-                    	<tr><th>Date and time</th><td>06/13/2014 16:54:20</td></tr>
-                        <tr><th>Temperature</th><td>23.7 *C</td></tr>
-                        <tr><th>Humidity</th><td>62.3 %</td></tr>
-                        <tr><th>Pressure</th><td>996.67 Pa</td></tr>
+                <table data-role="table" id="table-column-toggle-sensors" data-mode="columntoggle" class="ui-responsive table-stroke">
+     				<tbody id="table-column-toggle-sensors">
+     				<tr><td>Not yet loaded</td></tr>
        				</tbody>
        			</table>
             </div>
   		</div>
-    
-    <!--
-      <ul data-role="listview" data-ajax="false" data-inset="true" data-theme="a">
-        <li data-role="list-divider">Choose:</li>
-        <li><a href="../pages/wateringPlan.html">Watering plan</a></li>
-        <li><a href="../pages/outputStatus.html">Output status</a></li>
-        <li><a href="../pages/sensorValues.html">Sensors values</a></li>
-      </ul>  
-    -->
-    
 	</div><!-- /content -->
     
 
 
 </div><!-- /page -->
+
+<script type="text/javascript">
+
+function getWateringPlan(){
+	/**
+	 * Retrieve watering plan
+	 */
+ 	$.ajax({                                      
+ 		url: 'php/getWateringPlan.php',                     
+        data: "",                       
+   	  	dataType: 'json',           
+    	success: function(data) {
+   	   		if (data.success == true){
+   	   			var _html = '';
+   	   			var wateringPlan = data.wateringPlan;
+   				for(i=0; i < data.itemsNumber; i++){
+   	  				_html += "<tr>";
+   	   				_html += "<td>" + wateringPlan[i]['description'] + "</td>";
+   	   				_html += "<td>" + wateringPlan[i]['startTime'] + "</td>";
+   	   				_html += "<td>" + wateringPlan[i]['duration'] + "</td>";
+   	   				var _weekdays = "";
+   	   				if(wateringPlan[i]['weekdays'].length >= 7){
+   	   					var classActive = "ui-weekday-active";
+   	   					var classInactive = "ui-weekday-inactive";
+	   	   				for(j=0;j<7;j++){
+   	   						switch(j){
+   	   							case 0:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Mo</span>";
+   	   								break;
+   	   							case 1:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Tu</span>";
+   	   								break;
+   	   							case 2:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "We</span>";
+   	   								break;
+   	   							case 3:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Th</span>";
+   	   								break;
+   	   							case 4:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Fr</span>";
+   	   								break;
+   	   							case 5:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Sa</span>";
+   	   								break;
+   	   							case 6:
+   	   								if(wateringPlan[i]['weekdays'][j]=='0') _weekdays += "<span class=\""+classInactive+"\">";
+   	   								else _weekdays += "<span class=\""+classActive+"\">";
+   	   								_weekdays += "Su</span>";
+   	   								break;
+   	   							default:
+   	   								_weekdays += "<span class=\""+classInactive+"\">-</span>";
+   	   								break;
+   	   						}
+   	   					}	
+   	   				}
+   	   				_html += "<td>" + _weekdays + "</td>";
+   	   				_html += "<td>" + wateringPlan[i]['isOneShot'] + "</td>";
+   	   				_html += "<td>" + wateringPlan[i]['isForced'] + "</td>";
+   	   				_html += "</tr>";
+   	   			}
+        		$('#table-column-toggle-watering-plan').html(_html); 
+		    } else {
+        		$('#table-column-toggle-watering-plan').html(data.message);
+		    }
+      	} 
+    });
+}
+
+function getOutputsStatus(){
+	/**
+	 * Retrieve outputs' status
+	 */
+    $.ajax({                                      
+		url: 'php/getOutputsStatus.php',                     
+   		data: "",                       
+   	  	dataType: 'json',           
+   	   	success: function(data) {
+   	   		if (data.success == true){
+   	   			var _html = '';
+   	   			for(i=0; i < data.outputsNumber; i++){
+   	   				_html += "<tr><td>" + i + "</td><td>";
+   	   				if (data.output[i] == '0' || data.output[i] == 0)
+   	   					_html += "Inactive";
+   	   				else
+	   					_html += "Active";
+   	   				_html += "</td></tr>";
+   	   			}
+        		$('#table-column-toggle-outputs').html(_html); 
+		    } else {
+        	    $('#table-column-toggle-outputs').html(data.message);
+		    }
+      	} 
+    });
+}    	
+
+function getSensorsValues(){
+	/**
+	 * Retrieve sensors' values
+	 */
+    $.ajax({                                      
+	 	url: 'php/getSensorsValues.php',                     
+   		data: "",                       
+   	  	dataType: 'json',           
+   	   	success: function(data) {
+   	   		if (data.success == true){
+	        	var timestamp = data.date;              
+			    var temperature = data.temperature;              
+  			    var humidity = data.humidity;  
+        		var pressure = data.pressure/100;           
+        		var _html = "<tr><th>Date and time</th><td>"+timestamp+"</td></tr>";
+	        	_html += "<tr><th>Temperature</th><td>"+temperature+" &deg;C</td></tr>";
+    	    	_html += "<tr><th>Humidity</th><td>"+humidity+" %</td></tr>";
+        		_html += "<tr><th>Pressure</th><td>"+pressure+" Pa</td></tr>";
+        		$('#table-column-toggle-sensors').html(_html); 
+		    } else {
+        	    $('#table-column-toggle-sensors').html(data.message);
+		    }
+      	} 
+    });
+}
+
+function refreshMe(){	
+	getWateringPlan();
+	getOutputsStatus();
+	getSensorsValues();
+}
+
+$(document).ready(function(){	
+	refreshMe();
+});
+
+window.setInterval(function(){
+  refreshMe();
+}, 10000);
+</script>
+
 
 </body>
 </html>

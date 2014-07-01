@@ -81,6 +81,17 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
 
+	def storeSensorsValues(self, _timestamp, _temperature, _humidity, _pressure, _soilMoisture, _luminosity):
+		self.errorMessage = ''
+		try:
+			cur = self.dbConnection.cursor()
+			cur.execute('insert into sensors_log ([date], temperature, humidity, pressure, soil_moisture, luminosity) values (?,?,?,?,?,?)', (_timestamp, _temperature, _humidity, _pressure, _soilMoisture, _luminosity) )
+			self.dbConnection.commit()
+			return True
+		except Exception as error:
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
+			return False
+
 	def storeAction(self, _timestamp, _output, _actionid):
 		self.errorMessage = ''
 		try:

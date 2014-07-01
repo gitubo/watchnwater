@@ -158,12 +158,12 @@ String print2Char(int value){
 }
 
 void logBegin(){
-  if(1) {
+  if(0) {
     Serial.begin(9600);
     while (!Serial);
   }  
 }
 
 void log(String message){
-  if(1) Serial.println(message);
+  if(0) Serial.println(message);
 }
