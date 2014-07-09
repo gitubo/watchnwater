@@ -7,4 +7,11 @@
 
 .ui-weekday-inactive {
 	color: #DDDDDD;
-} 
+}
+
+.sensors-chart {
+	height: 300px;
+	width: 500px;
+	position: relative;
+	margin-top: 20px;
+}

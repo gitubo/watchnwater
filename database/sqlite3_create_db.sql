@@ -17,12 +17,22 @@ INSERT INTO [settings] ([name], [int_value]) VALUES ('outputs_number', 4);
 CREATE TABLE sensors_log (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
     [date]              DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
-    temperature         NUMERIC( 4, 2 ),
-    humidity            NUMERIC( 2, 0 ),
-    pressure            NUMERIC( 6, 2 ),
-    soil_moisture       NUMERIC( 2, 0 ),
-    luminosity          NUMERIC( 6, 0 )
+    temperature         INTEGER,
+    humidity            INTEGER,
+    pressure            INTEGER,
+    soil_moisture       INTEGER,
+    luminosity          INTEGER
 );
+
+-- Index: idx_sensors_log
+CREATE INDEX idx_sensors_log ON sensors_log (
+    [date]
+);
+
+-- Trigger: sensors_log_limit
+CREATE TRIGGER sensors_log_limit AFTER INSERT ON sensors_log WHEN NEW.rowid % 1000 = 0 BEGIN
+	DELETE FROM sensors_log WHERE [date] < (SELECT MIN([date]) FROM sensors_log ORDER BY [date] DESC LIMIT 10000);
+END;
 
 -- Table: outputs
 CREATE TABLE outputs (
@@ -30,16 +40,26 @@ CREATE TABLE outputs (
     description         VARCHAR( 150 )  NOT NULL UNIQUE
 );
 
-INSERT INTO [outputs] ([id], [description]) VALUES (0, 'output0');
-INSERT INTO [outputs] ([id], [description]) VALUES (1, 'output1');
-INSERT INTO [outputs] ([id], [description]) VALUES (2, 'output2');
-INSERT INTO [outputs] ([id], [description]) VALUES (3, 'output3');
+INSERT INTO [outputs] ([id], [description]) VALUES (0, 'Zone A');
+INSERT INTO [outputs] ([id], [description]) VALUES (1, 'Zone B');
+INSERT INTO [outputs] ([id], [description]) VALUES (2, 'Zone C');
+INSERT INTO [outputs] ([id], [description]) VALUES (3, 'Zone D');
 
 -- Table: outputs_log
 CREATE TABLE outputs_log (
     [date]	            DATETIME         DEFAULT ( datetime( CURRENT_TIMESTAMP, 'localtime' )  ),
     output              VARCHAR( 32 )    NOT NULL
 );
+
+-- Index: idx_outputs_log
+CREATE INDEX idx_outputs_log ON outputs_log (
+    [date]
+);
+
+-- Trigger: outputs_log_limit
+CREATE TRIGGER outputs_log_limit AFTER INSERT ON outputs_log WHEN NEW.rowid % 1000 = 0 BEGIN
+	DELETE FROM outputs_log WHERE [date] < (SELECT MIN([date]) FROM outputs_log ORDER BY [date] DESC LIMIT 10000);
+END;
 
 -- Table: actions
 CREATE TABLE actions (
@@ -63,6 +83,16 @@ CREATE TABLE actions_log (
     [action]            INTEGER          REFERENCES actions ( id ) NOT NULL
 );
 
+-- Index: idx_actions_log
+CREATE INDEX idx_actions_log ON actions_log (
+    [date]
+);
+
+-- Trigger: actions_log_limit
+CREATE TRIGGER actions_log_limit AFTER INSERT ON actions_log WHEN NEW.rowid % 1000 = 0 BEGIN
+	DELETE FROM actions_log WHERE [date] < (SELECT MIN([date]) FROM actions_log ORDER BY [date] DESC LIMIT 10000);
+END;
+
 -- Table: watering_plan
 CREATE TABLE watering_plan (
     id                  INTEGER          PRIMARY KEY AUTOINCREMENT,
@@ -79,4 +109,5 @@ INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-0
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-01 19:00:00', 5);
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (1, '2014-01-01 07:05:00', 5);
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (2, '2014-01-01 07:10:00', 5);
-
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (3, '2014-01-01 07:15:00', 5);
+INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (3, '2014-01-01 19:05:00', 10);

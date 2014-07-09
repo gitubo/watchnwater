@@ -354,7 +354,7 @@ try:
 				_request += '0'
 
 		# Sending the request to change the output 			
-		logging.info('Sending output request %s' % _request)
+		logging.debug('Sending output request %s' % _request)
 		_retValue = theBridge.putValue('outputRequest', _request)
 		if _retValue != _request:
 			logging.error('putValue not working as expected')

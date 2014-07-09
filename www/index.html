@@ -10,6 +10,8 @@
 	<link rel="stylesheet" href="js/jqplot/jquery.jqplot.min.css" />
 	<script src="js/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
 	<script src="js/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+	<script src="js/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+	<script src="js/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
 	<link rel="stylesheet" href="css/wnw.css" />
 </head> 
 <body> 
@@ -37,7 +39,7 @@
     					</tr>
   					</thead>
 					<tbody id="table-column-toggle-watering-plan">
-					<tr><td>Not yet loaded</td></tr>
+					<tr><td>Loading...</td></tr>
 					</tbody>
 				</table>
             </div>
@@ -51,7 +53,7 @@
     					</tr>
   					</thead>
   	    			<tbody id="table-column-toggle-outputs">
-     				<tr><td>Not yet loaded</td></tr>
+     				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
             </div>
@@ -59,10 +61,11 @@
                 <h3>Values of the sensors</h3>
                 <table data-role="table" id="table-column-toggle-sensors" data-mode="columntoggle" class="ui-responsive table-stroke">
      				<tbody id="table-column-toggle-sensors">
-     				<tr><td>Not yet loaded</td></tr>
+     				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
-       			<div id="sensorsChart" style="height:300px; width:500px;"></div>
+       			<div id="TemperatureAndHumidityChart" class="sensors-chart"></div>
+       			<div id="PressureChart" class="sensors-chart"></div>
             </div>
   		</div>
 	</div><!-- /content -->
@@ -190,7 +193,7 @@ function getSensorsValues(){
 	        	var timestamp = data.date;              
 			    var temperature = data.temperature;              
   			    var humidity = data.humidity;  
-        		var pressure = data.pressure/100;           
+        		var pressure = data.pressure;           
         		var _html = "<tr><th>Date and time</th><td>"+timestamp+"</td></tr>";
 	        	_html += "<tr><th>Temperature</th><td>"+temperature+" &deg;C</td></tr>";
     	    	_html += "<tr><th>Humidity</th><td>"+humidity+" %</td></tr>";
@@ -204,12 +207,11 @@ function getSensorsValues(){
 }
 
 function mergeData(dateArray, valueArray){
-	var minLength = 0;
-	if(dateArray.length > valueArray.length) minLength = valueArray.length;
-	else minLength = dateArray.length;
+	if(dateArray.length != valueArray.length) return;
 	var outputArray = new Array();
-	for(i=0;i<minLength;i++){
-		outputArray.push([dateArray[i], valueArray[i]]);
+	for(i=0;i<dateArray.length;i++){
+		var _a = [dateArray[i],valueArray[i]];
+		outputArray.push(_a);
 	}
 	console.log('outputArray = '+outputArray);
 	return outputArray;
@@ -225,22 +227,57 @@ function graphSensorsHistory(){
    	  	dataType: 'json',           
    	   	success: function(data) {
    	   		if (data.success == true){
-   	   			var plot = $.jqplot('sensorsChart',[mergeData(data.date,data.temperature), mergeData(data.date,data.humidity)], {
-   	   				/*title: 'Sensors history',
-   	   				axes: {
-   	   					xaxis: {
+   	   			var plot = $.jqplot('TemperatureAndHumidityChart',[data.temperature, data.humidity], {
+   	   				title: 'Temperature and Humidity',
+   	   				series: [{yaxis: 'yaxis'},{yaxis: 'y2axis'}],
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
    	   						label: 'Time',
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: {formatString:'%H:%M:%S'},
-   	   						numberTicks: 8
+   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   						tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+   	   						tickOptions: { formatString: '%H:%M', angle: 15 }
    	   					},
    	   					yaxis: {
-							label: 'Temperature & Humidity'
-						}   	   				
-					}	*/
-   	   			});
+   	   						label: 'Temperature (°C)',
+   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					},
+   	   					y2axis: {
+   	   						label: 'Humidity (%)',
+   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					}
+   	   				}
+   	   			}).replot();
+   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
+   	   				title: 'Pressure',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						label: 'Time',
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   						tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+   	   						tickOptions: { formatString: '%H:%M', angle: 15 }
+   	   					},
+   	   					yaxis: {
+   	   						label: 'Pressure (Pa)',
+   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					}
+   	   				}
+   	   			}).replot();
 		    } else {
         	    $('sensorsChart').html(data.message);
+        	    console.log("Error retrieving sensors history");
 		    }
       	} 
     });
