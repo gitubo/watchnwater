@@ -106,8 +106,8 @@ CREATE TABLE watering_plan (
 );
 
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-01 07:00:00', 5);
-INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (0, '2014-01-01 19:00:00', 5);
+INSERT INTO [watering_plan] ([output], [from], [duration], [weekdays_bitmask]) VALUES (0, '2014-01-01 19:00:00', 5, '10101010');
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (1, '2014-01-01 07:05:00', 5);
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (2, '2014-01-01 07:10:00', 5);
 INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (3, '2014-01-01 07:15:00', 5);
-INSERT INTO [watering_plan] ([output], [from], [duration]) VALUES (3, '2014-01-01 19:05:00', 10);
+INSERT INTO [watering_plan] ([output], [from], [duration], [weekdays_bitmask]) VALUES (3, '2014-01-01 19:05:00', 10, '10101010');

@@ -15,16 +15,19 @@
 	<link rel="stylesheet" href="css/wnw.css" />
 </head> 
 <body> 
-<?php
-echo 'PIPPO';
-?>
-<div data-role="page" id="login">
+<div data-role="page"  data-theme="a">
 	<div data-role="header">
 		<h1>Watch 'n' Water</h1>
 	</div><!-- /header -->
 
 	<div data-role="content">
-		<form id="check-user" class"ui-body ui-body-a ui-corner-all ui-login-form" data-ajax="false">
+	
+<?php
+	//Not logged in
+	if(!isset($_SESSION['sessionID'])):
+?>
+	
+		<form id="check-user" class="ui-login-form ui-body ui-corner-all" data-ajax="false">
 			<fieldset>
 				<div data-role="fieldcontain">
 					<label for="username">Username:</label>
@@ -37,15 +40,11 @@ echo 'PIPPO';
 				<input type="button" name="submit" id="submit" value="Submit">
 			</fieldset>
 		</form>
-	</div>
-</div>
-<div data-role="page" id="wnw">
 
-	<div data-role="header">
-		<h1>Watch 'n' Water</h1>
-	</div><!-- /header -->
-
-	<div data-role="content">	
+	<?php
+		//Logged in
+		else:
+	?>
     
 		<div data-role="collapsibleset" data-theme="a" data-content-theme="a"  data-iconpos="right" data-collapsed-icon="arrow-r" data-expanded-icon="arrow-d">
             <div id="collapsible-watering-plan" data-role="collapsible">
@@ -91,13 +90,51 @@ echo 'PIPPO';
        			<div id="PressureChart" class="sensors-chart">Loading 'pressure' chart...</div>
             </div>
   		</div>
+  		
+  	<?php
+  		endif;
+  	?>
+  	
 	</div><!-- /content -->
-    
-
-
 </div><!-- /page -->
 
 <script type="text/javascript">
+<?php
+	if(!isset($_SESSION['sessionID'])):
+?>
+
+$(document).ready(function(){
+	$(document).on('click','#submit',function(){
+		if($('#username').val().length > 0 && $('#password').val().length > 0){
+			$.ajax({
+				url: 'php/check.php',
+				data: { action:'login', username:$('#username').val(), password:$('#password').val() },
+				type: 'post',
+				async: 'true',
+				dataType: 'json',
+				beforeSend: function(){ $.mobile.loading('show'); },
+				complete: function(){$.mobile.loading('hide'); },
+				success: function(result){
+					if(result.status) {
+						console.log(" -- SESSIONID = <?php echo $_SESSION['sessionID'];?> -- ");
+						//location.reload();					
+					} else {
+						alert('Logon unsuccessful!');
+					}
+				},
+				error: function(){ alert('Network error has occurred please try again.'); }
+			});
+		} else {
+			alert('Please fill all necessary fields');
+		}
+		return false;
+	});
+});
+
+<?php
+	else:
+?>
+
 
 function getWateringPlan(){
 	/**
@@ -232,17 +269,6 @@ function getSensorsValues(){
     });
 }
 
-function mergeData(dateArray, valueArray){
-	if(dateArray.length != valueArray.length) return;
-	var outputArray = new Array();
-	for(i=0;i<dateArray.length;i++){
-		var _a = [dateArray[i],valueArray[i]];
-		outputArray.push(_a);
-	}
-	console.log('outputArray = '+outputArray);
-	return outputArray;
-}
-
 function graphSensorsHistory(){
 	/**
 	 * Retrieve sensors' history
@@ -318,45 +344,19 @@ function refreshAll(){
 }
 
 $(document).ready(function(){	
-	if($.mobile.activePage.attr('wnw')){
 		refreshAll();
-	}
 });
 
-$(document).on('pageinit', '#wnw', function(){
-	refreshAll();
-	window.setInterval(function(){ getWateringPlan(); }, 60000); //every minute
-	window.setInterval(function(){ getOutputsStatus(); }, 10000); //every 10 seconds
-	window.setInterval(function(){ getSensorsValues(); }, 10000); //every 10 seconds
-	window.setInterval(function(){ graphSensorsHistory(); }, 300000); //every 5 minutes
-}
 
-$(document).on('pageinit', '#login', function(){
-	$(document).on('click','#submit',function(){
-		if($('#username').val().length > 0 && $('#password').val().length > 0){
-			$.ajax({
-				url: 'php/check.php',
-				data: { action:'login', username:$('#username').val(), password:$('#password').val() },
-				type: 'post',
-				async: 'true',
-				dataType: 'json',
-				beforeSend: function(){ $.mobile.loading('show'); },
-				complete: function(){$.mobile.loading('hide'); },
-				success: function(result){
-					if(result.status) {
-						$.mobile.changePage('#wnw');
-					} else {
-						alert('Logon unsuccessful!');
-					}
-				},
-				error: function(){ alert('Network error has occurred please try again.'); }
-			});
-		} else {
-			alert('Please fill all necessary fields');
-		}
-		return false;
-	});
-});
+window.setInterval(function(){ getWateringPlan(); }, 60000); //every minute
+window.setInterval(function(){ getOutputsStatus(); }, 10000); //every 10 seconds
+window.setInterval(function(){ getSensorsValues(); }, 10000); //every 10 seconds
+window.setInterval(function(){ graphSensorsHistory(); }, 300000); //every 5 minutes
+
+
+<?php
+	endif;
+?>
 
 </script>
 
