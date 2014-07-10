@@ -6,7 +6,7 @@ $db = new PDO($dir) or die("cannot open database");
 //Fetch events from database as associative array
 //$query = 'SELECT [date], temperature, humidity, pressure, soil_moisture, luminosity FROM sensors_log ORDER BY [date] DESC';
 $query = 'SELECT [date],CAST(AVG(temperature) AS INTEGER),CAST(AVG(humidity) AS INTEGER),CAST(AVG(pressure) AS INTEGER),CAST(AVG(soil_moisture) AS INTEGER),CAST(AVG(luminosity) AS INTEGER) FROM sensors_log';
-$query .= " GROUP BY strftime('%Y%m%d%H0', [date]) + strftime('%M', [date])/20";
+$query .= " GROUP BY strftime('%Y%m%d%H0', [date]) + strftime('%M', [date])/20 ORDER BY [date] DESC";
 
 if(isset($_POST['limit']) && $_POST['limit']<100){
 	$query .= ' LIMIT '.$_POST['limit'];

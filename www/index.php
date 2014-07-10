@@ -24,6 +24,7 @@
 	
 <?php
 	//Not logged in
+	session_start();
 	if(!isset($_SESSION['sessionID'])):
 ?>
 	
@@ -116,8 +117,7 @@ $(document).ready(function(){
 				complete: function(){$.mobile.loading('hide'); },
 				success: function(result){
 					if(result.status) {
-						console.log(" -- SESSIONID = <?php echo $_SESSION['sessionID'];?> -- ");
-						//location.reload();					
+						location.reload();					
 					} else {
 						alert('Logon unsuccessful!');
 					}
