@@ -3,6 +3,7 @@
 	<head> 
 	<title>Homepage</title> 
 	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<meta charset="UTF-8">
 	<link rel="stylesheet" href="js/jquery.mobile-1.4.2.min.css" />
 	<script src="js/jquery-1.11.1.min.js"></script>
 	<script src="js/jquery.mobile-1.4.2.min.js"></script>
@@ -13,7 +14,7 @@
 	<script src="js/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
 	<script src="js/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
 	<link rel="stylesheet" href="css/wnw.css" />
-</head> 
+	</head> 
 <body> 
 <div data-role="page"  data-theme="a">
 	<div data-role="header">
@@ -86,8 +87,9 @@
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
-       			<div id="TemperatureAndHumidityChart" class="sensors-chart">Loading 'Temp&Humidity' chart...</div>
-       			<div id="PressureChart" class="sensors-chart">Loading 'pressure' chart...</div>
+       			<div id="TemperatureChart" class="sensors-chart">Loading 'Temperature' chart...</div>
+       			<div id="HumidityChart" class="sensors-chart">Loading 'Humidity' chart...</div>
+       			<div id="PressureChart" class="sensors-chart">Loading 'Pressure' chart...</div>
             </div>
   		</div>
   		
@@ -283,50 +285,68 @@ function graphSensorsHistory(){
    	  	async: 'true',      
    	   	success: function(data) {
    	   		if (data.success == true){
-   	   			var plot = $.jqplot('TemperatureAndHumidityChart',[data.temperature, data.humidity], {
-   	   				title: 'Temperature and Humidity',
-   	   				series: [{yaxis: 'yaxis'},{yaxis: 'y2axis'}],
+   	   			var plot = $.jqplot('TemperatureChart',[data.temperature], {
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
    	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
    	   				axes: { 
    	   					xaxis:{
-   	   						label: 'Time',
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   						tickRenderer: $.jqplot.CanvasAxisTickRenderer,
-   	   						tickOptions: { formatString: '%H:%M', angle: 15 }
+   	   						tickOptions: { formatString: '%H:%M' }
    	   					},
    	   					yaxis: {
    	   						label: 'Temperature (°C)',
-   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
    	   						tickOptions: { formatString: '%.2f'}
    	   					},
-   	   					y2axis: {
-   	   						label: 'Humidity (%)',
-   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   						tickOptions: { formatString: '%.2f'}
-   	   					}
    	   				}
    	   			}).replot();
-   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
-   	   				title: 'Pressure',
+   	   			var plot1 = $.jqplot('HumidityChart',[data.humidity], {
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
    	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
    	   				axes: { 
    	   					xaxis:{
-   	   						label: 'Time',
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   						tickRenderer: $.jqplot.CanvasAxisTickRenderer,
-   	   						tickOptions: { formatString: '%H:%M', angle: 15 }
+   	   						tickOptions: { formatString: '%H:%M'}
+   	   					},
+   	   					yaxis: {
+   	   						label: 'Humidity (%)',
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					}
+   	   				}
+   	   			}).replot();   	   			
+   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'}
    	   					},
    	   					yaxis: {
    	   						label: 'Pressure (Pa)',
-   	   						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
    	   						tickOptions: { formatString: '%.2f'}
    	   					}
    	   				}

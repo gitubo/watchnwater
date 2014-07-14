@@ -26,8 +26,9 @@ table.ui-table-columntoggle td {
 }
 
 .sensors-chart {
-	height: 300px;
-	width: 500px;
+	font-size: 0.7em;
+	height: 200px;
+	width: 300px;
 	position: relative;
 	margin-top: 20px;
 }
@@ -52,9 +53,7 @@ table.ui-table-columntoggle td {
 @media all and (max-width: 320px) {
 	.sensors-chart {
 		height: 200px;
-		width: 300px;
-		position: relative;
-		margin-top: 5px;
+		width: 250px;
 	}
 	#table-column-toggle-watering-plan {
 		width: 280px;
