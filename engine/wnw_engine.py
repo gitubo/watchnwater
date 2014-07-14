@@ -14,22 +14,38 @@ import logging
 from time import sleep
 import subprocess
 
+#Import class to manage the database
 import wnw_database as wnwDB
+
+#Import class to manage the bridge
+#(communication with the ATmega via mailbox)
 import wnw_bridge as wnwBridge
 
-VERBOSE = 1
+#
+#Constant definitions
+#
+#Log file name, absolute path
 LOG_FILENAME = '/mnt/sda1/wnw/log/engine.log'
-SUCCESS = 0
-GENERIC_ERROR = 1
+#Soil maisture sensor enabling
 SOIL_MOISTURE_SENSOR = False
+#Soil moisture threshold use 
+#to decide if the soil is dry or wet
 SOIL_MOISTURE_THRESHOLD = 1000
+#Weather forecast feature enabling
 WEATHER_FORECAST = False
 
+#
+#Global variables
+#
+#The connection to the database
 theDB = None
+#The connection to the bridge
 theBridge = None
-
+#A boolean to break the main loop in case of error
 _STAY_IN_THE_LOOP_ = False
+#The number of supported outputs
 _OUTPUTS_NUMBER_ = 0
+#The irrigation plan
 _WATERING_PLAN_ = None
 
 
@@ -235,7 +251,7 @@ def getExpectedStatus(_output, _nowInSeconds):
 
 def evaluateTurningOnOutput(_output):
 	if SOIL_MOISTURE_SENSOR == True:
-		# TO BE IMPLAMENTED
+		# TO BE IMPLEMENTED
 		#
 		# We have to consider the avegare value of the soil moisture
 		# Consider that a sample is taken almost every seconds,
