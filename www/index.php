@@ -57,11 +57,10 @@
       						<th data-priority="1">Starts at</th>
      					 	<th data-priority="2">Duration</th>
       						<th data-priority="3">Days of the week</th>
-      						<th data-priority="4">Oneshot</th>
-      						<th data-priority="5">Forced</th>
+      						<th data-priority="4">Action</th>
     					</tr>
   					</thead>
-					<tbody id="table-column-toggle-watering-plan">
+					<tbody id="table-body-watering-plan">
 					<tr><td>Loading...</td></tr>
 					</tbody>
 				</table>
@@ -75,7 +74,7 @@
       						<th data-priority="1">Status</th>
     					</tr>
   					</thead>
-  	    			<tbody id="table-column-toggle-outputs">
+  	    			<tbody id="table-body-outputs">
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
@@ -83,7 +82,7 @@
             <div id="collapsible-sensors" data-role="collapsible">
                 <h3>Values of the sensors</h3>
                 <table data-role="table" id="table-column-toggle-sensors" data-mode="columntoggle" class="ui-responsive table-stroke">
-     				<tbody id="table-column-toggle-sensors">
+     				<tbody id="table-body-sensors">
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
@@ -202,11 +201,15 @@ function getWateringPlan(){
    	   					}	
    	   				}
    	   				_html += "<td>" + _weekdays + "</td>";
-   	   				_html += "<td>" + wateringPlan[i]['isOneShot'] + "</td>";
-   	   				_html += "<td>" + wateringPlan[i]['isForced'] + "</td>";
+   	   				_html += "<td>";
+   	   				_html +="<a href=\"#\" class=\"ui-icon-as-link\"><img src=\"js/images/icons-png/edit-black.png\" /></a>";
+   	   				_html +="<a href=\"#\" class=\"ui-icon-as-link\"><img src=\"js/images/icons-png/delete-black.png\" /></a>";
+   	   				_html += "</td>";
+   	   				//_html += "<td>" + wateringPlan[i]['isOneShot'] + "</td>";
+   	   				//_html += "<td>" + wateringPlan[i]['isForced'] + "</td>";
    	   				_html += "</tr>";
    	   			}
-        		$('#table-column-toggle-watering-plan').html(_html); 
+        		$('#table-body-watering-plan').html(_html); 
 		    } else {
         		$('#table-column-toggle-watering-plan').html(data.message);
 		    }
@@ -234,7 +237,7 @@ function getOutputsStatus(){
 	   					_html += "Active";
    	   				_html += "</td></tr>";
    	   			}
-        		$('#table-column-toggle-outputs').html(_html); 
+        		$('#table-body-outputs').html(_html); 
 		    } else {
         	    $('#table-column-toggle-outputs').html(data.message);
 		    }
@@ -261,7 +264,7 @@ function getSensorsValues(){
 	        	_html += "<tr><th>Temperature</th><td>"+temperature+" &deg;C</td></tr>";
     	    	_html += "<tr><th>Humidity</th><td>"+humidity+" %</td></tr>";
         		_html += "<tr><th>Pressure</th><td>"+pressure+" Pa</td></tr>";
-        		$('#table-column-toggle-sensors').html(_html); 
+        		$('#table-body-sensors').html(_html); 
 		    } else {
         	    $('#table-column-toggle-sensors').html(data.message);
 		    }

@@ -1,12 +1,28 @@
+.ui-header .ui-title {
+	font-size: 1.1em;
+} 
+
 .ui-table-columntoggle-btn {
 	display: none !important;
 }
+
+.ui-collapsible-heading-toggle {
+	font-size: 0.8em;
+} 
 
 .ui-weekday-active {
 } 
 
 .ui-weekday-inactive {
 	color: #DDDDDD;
+}
+
+table.ui-table-columntoggle th {
+	font-size: 0.75em;
+} 
+
+table.ui-table-columntoggle td {
+	font-size: 0.7em;
 }
 
 .sensors-chart {
@@ -22,23 +38,27 @@
 	margin: 0 auto;
 }
 
+.ui-icon-as-link {
+	padding-left: 5px;
+	padding-right: 5px;
+} 
+
 @media all and (min-width: 800px) {
-	#nav {
-		width: 300px;
-		float: left;
-		margin-right: 20px;
-	}
-	#grid {
-		width: 450px;
-		float: left;
-	}
 }
 
 @media all and (max-width: 799px) {
-	#nav {
-		width: 100%;
+}
+
+@media all and (max-width: 320px) {
+	.sensors-chart {
+		height: 200px;
+		width: 300px;
+		position: relative;
+		margin-top: 5px;
 	}
-	#grid {
-		width: 100%;
-	}
+	#table-column-toggle-watering-plan {
+		width: 280px;
+	} 
+
+
 }
