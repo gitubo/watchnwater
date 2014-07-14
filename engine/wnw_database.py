@@ -1,5 +1,7 @@
+#Import sqlite3 library
 import sqlite3 as lite
 
+#Definition of action types
 ACTION_TURNOFF_DEFAULT = 0
 ACTION_TURNON_AS_PER_WATERING_PLAN = 1
 ACTION_TURNOFF_AS_PER_WATERING_PLAN = 2
@@ -8,16 +10,25 @@ ACTION_TURNOFF_FORCED = 4
 ACTION_TURNON_AFTER_EVALUATION= 5
 ACTION_TURNOFF_AFTER_EVALUATION = 6
 
+#Return code to be used in case of invalid counter
 DBERROR_INVALID_COUNT = -1
 
+#Database filename
 DB_FILENAME = '/mnt/sda1/wnw/wnwdb.sqlite'
 
+#
+# The Database connection class
+#
 class WnWDatabaseConnection:
 
+	#The constructor initializing 
+	#the connection and the error message 
 	def __init__(self):
 		self.dbConnection = None
 		self.errorMessage = ''
 
+	# The init function used to
+	# setup the connection manually
 	def init(self):
 		self.errorMessage = ''
 		if not self.dbConnection:
@@ -31,14 +42,18 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'Database connection already established'
 			return False
 
+	# Close the connection and reset the error message
 	def close(self):
 		self.errorMessage = ''
 		if self.dbConnection:
 			self.dbConnection.close()
-			
+	
+	# Return the error message if any
 	def getErrorMessage(self):
 		return self.errorMessage
-			
+	
+	# Return the number of output defined 
+	# as system parameter into the database	
 	def getOutputsNumber(self):
 		self.errorMessage = ''
 		try:
@@ -50,6 +65,13 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return DBERROR_INVALID_COUNT
 			
+	# Return the watering plan as an array
+	# Every item of the array is defined as follow:
+	# The ID of the output: integer
+	# HH:MM representing the time (hour and minutes) when the watering must be started: string
+	# The duration in minutes of the watering: integer
+	# The bitmask of the days of the week when the watering must be started ('0' means do NOT start, '1' means start): string (only the most important 7 charachers will be considered
+	# The information if the watering must be done a part from any other condition (soil moisture or weather forecast): integer (0 means not forced, 1 or any other values means forced)
 	def getWateringPlan(self):
 		self.errorMessage = ''
 		try:
@@ -69,7 +91,11 @@ class WnWDatabaseConnection:
 		except Exception as error:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return None
-			
+	
+	# Store the value of the outputs
+	# _timestamp: the datetime when the output has been read
+	# _status: a string of '0' or '1' encoding the status of the outputs
+	# Returns True if the transaction has been committed, otherwise False 
 	def storeOutputStatus(self, _timestamp, _status):
 		self.errorMessage = ''
 		try:
@@ -81,6 +107,15 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
 
+	# Store the value of the sensors
+	# _timestamp: the datetime when the sensors have been read
+	# _temperature: an integer storing the value of the temperature 
+	# _humidity: an integer storing the value of the humidity 
+	# _pressure: an integer storing the value of the pressure
+	# _soilMoisture: an integer storing the value of the soil moisture
+	# _luminosity: an integer storing the value of the luminosity
+	# Please note that the last 2 digit of the integer are used to store the decimal part (xy.zw is stored as xyzw)
+	# Returns True if the transaction has been committed, otherwise False 
 	def storeSensorsValues(self, _timestamp, _temperature, _humidity, _pressure, _soilMoisture, _luminosity):
 		self.errorMessage = ''
 		try:
@@ -92,6 +127,11 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
 
+	# Store an action operated on an output
+	# _timestamp: the datetime when the action has been performed
+	# _output: the impacted output
+	# _actionid: the type of action
+	# Returns True if the transaction has been committed, otherwise False 
 	def storeAction(self, _timestamp, _output, _actionid):
 		self.errorMessage = ''
 		try:
