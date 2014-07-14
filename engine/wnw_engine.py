@@ -7,6 +7,16 @@
 #
 # LICENSE: GPL v3
 
+import sys
+import os
+import time
+import logging
+from time import sleep
+import subprocess
+
+import wnw_database as wnwDB
+import wnw_bridge as wnwBridge
+
 VERBOSE = 1
 LOG_FILENAME = '/mnt/sda1/wnw/log/engine.log'
 SUCCESS = 0
@@ -14,18 +24,6 @@ GENERIC_ERROR = 1
 SOIL_MOISTURE_SENSOR = False
 SOIL_MOISTURE_THRESHOLD = 1000
 WEATHER_FORECAST = False
-
-import sqlite3 as lite
-import sys
-import os
-import time
-import logging
-#sys.path.insert(0, BRIDGECLIENT_DIR) 
-from time import sleep
-import subprocess
-
-import wnw_database as wnwDB
-import wnw_bridge as wnwBridge
 
 theDB = None
 theBridge = None
