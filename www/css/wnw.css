@@ -1,5 +1,6 @@
 .ui-header .ui-title {
 	font-size: 1.1em;
+	margin: 0;
 } 
 
 .ui-table-columntoggle-btn {
@@ -8,6 +9,26 @@
 
 .ui-collapsible-heading-toggle {
 	font-size: 0.8em;
+} 
+
+.my-h3 {
+	font-size: 0.8em;
+}
+
+.my-label {
+	font-size: 0.8em;
+}
+
+.ui-mobile label {
+	font-size: 0.75em;
+}
+
+.ui-input-text input {
+	font-size: 0.75em;
+}
+
+.watering-plan-output-name {
+	font-weight: bold;
 } 
 
 .ui-weekday-active {
@@ -25,12 +46,14 @@ table.ui-table-columntoggle td {
 	font-size: 0.7em;
 }
 
-.sensors-chart {
+.my-centered-anchor {
+	margin: auto;
+}
+
+.my-chart {
 	font-size: 0.7em;
 	height: 200px;
-	width: 300px;
-	position: relative;
-	margin-top: 20px;
+	width: 250px;
 }
 
 .ui-login-form {
@@ -45,16 +68,14 @@ table.ui-table-columntoggle td {
 } 
 
 @media all and (min-width: 800px) {
+
 }
 
 @media all and (max-width: 799px) {
+
 }
 
 @media all and (max-width: 320px) {
-	.sensors-chart {
-		height: 200px;
-		width: 250px;
-	}
 	#table-column-toggle-watering-plan {
 		width: 280px;
 	} 

@@ -304,6 +304,13 @@ try:
 	#
 	logging.info('Calling the startup procedure...')
 	_STAY_IN_THE_LOOP_ = startup()
+	# _lastStartTime variable is used
+	# to store the sensors values every 60 seconds
+	_lastStartTime = 0; 
+	# _lastSavedReturnStatus is used 
+	# to store the status of the outputs
+	# only if it differs from the previously saved status
+	_lastSavedReturnStatus = '';
 	
 	#
 	# Main loop
@@ -315,12 +322,14 @@ try:
 		
 	while _STAY_IN_THE_LOOP_:
 	
-		# Get time to calculate loop duration
+		# Get time to calculate loop duration in milliseconds
 		_loopStartTime = int(time.time() * 1000)
 		
-		# Store output status
-		storeSensorsValues(theBridge.getValue('temperature'),theBridge.getValue('humidity'),theBridge.getValue('pressure'),theBridge.getValue('soilMoisture'),theBridge.getValue('luminosity'),)
-		
+		# Store output status every one minute
+		if int(_loopStartTime/60000) != _lastStartTime:
+			storeSensorsValues(theBridge.getValue('temperature'), theBridge.getValue('humidity'), theBridge.getValue('pressure'), theBridge.getValue('soilMoisture'), theBridge.getValue('luminosity'))
+			_lastStartTime = int(_loopStartTime/60000)
+			
 		# Calculate the number of minutes from midnight 
 		_cHour = time.strftime('%H'); _cMinutes = time.strftime('%M'); _cSeconds = time.strftime('%S')
 		_nowInSeconds = int(_cHour) * 3600 + int(_cMinutes) * 60 + int(_cSeconds);	
@@ -384,8 +393,10 @@ try:
 			else:
 				logging.error("The output change request has not been correctly processed (request '%s', response '%s'" % (_request,_returnValue))
 		
-			# Store output status
-			storeOutputStatus(_returnValue)
+			# Store output status only if it differs from the previous status
+			if _returnValue != _lastSavedReturnStatus:
+				storeOutputStatus(_returnValue)
+				_lastSavedReturnStatus = _returnValue
 	
 		# Get time to calculate loop duration
 		logging.debug('Sleep...')

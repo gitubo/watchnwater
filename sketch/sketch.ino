@@ -9,6 +9,9 @@
 #define DHTPIN 8    
 #define DHTTYPE DHT22 
 
+//Definition of the pin connected to the soil moisture sensor
+#define SOILMOISTUREPIN 14 
+
 //Definition of the general purpose led used tfor diagnosys
 #define LEDPIN 13
 
@@ -139,6 +142,9 @@ void loop() {
     log(" -> Pressure: " + String((float)(_pressure)/100.0) + "Pa"); 
     log(" -> Temperature: " + String(((float)_temperatureBMP)/100.0) + "*C");
   }
+
+  // Read the soil moisture level
+  int _soilMoisture = analogRead(SOILMOISTUREPIN);
   
   /*
    * Make sensors info available to outside
@@ -149,7 +155,7 @@ void loop() {
   Bridge.put(String("temperature"), String(_temperature));
   Bridge.put(String("humidity"), String(_humidity));
   Bridge.put(String("pressure"), String(_pressure));
-  Bridge.put(String("soil_moisture"), String(""));
+  Bridge.put(String("soil_moisture"), String(_soilMoisture));
   Bridge.put(String("luminosity"), String(""));
 
   // Turn off the led to indicate the cycle has been completed

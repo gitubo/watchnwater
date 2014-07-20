@@ -4,15 +4,15 @@
 	<title>Homepage</title> 
 	<meta name="viewport" content="width=device-width, initial-scale=1"> 
 	<meta charset="UTF-8">
-	<link rel="stylesheet" href="js/jquery.mobile-1.4.2.min.css" />
 	<script src="js/jquery-1.11.1.min.js"></script>
 	<script src="js/jquery.mobile-1.4.2.min.js"></script>
 	<script src="js/jqplot/jquery.jqplot.min.js"></script>
-	<link rel="stylesheet" href="js/jqplot/jquery.jqplot.min.css" />
 	<script src="js/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
 	<script src="js/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 	<script src="js/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
 	<script src="js/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
+	<link rel="stylesheet" href="js/jquery.mobile-1.4.2.min.css" />
+	<link rel="stylesheet" href="js/jqplot/jquery.jqplot.min.css" />
 	<link rel="stylesheet" href="css/wnw.css" />
 	</head> 
 <body> 
@@ -47,20 +47,54 @@
 		//Logged in
 		else:
 	?>
-    
+    	<div data-role="popup" id="editWateringPlanItem" class="ui-corner-all">
+    		<form>
+    			<div style="padding:10px 20px;">
+    				<h3 class="my-h3" id="editWateringPlanItemOutput">Output</h3>
+    				<table style="width: 180px; margin-bottom: 5px">
+    					<tr><td colspan="2" align="center" class="my-label">Starts at</td><td style="width:100%"></td><td align="center" class="my-label">Min.</td></tr>
+    					<tr><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemAddHour" href="" data-role="button" data-iconpos="notext" data-icon="plus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">+</a>
+    					</td><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemAddMinute" href="" data-role="button" data-iconpos="notext" data-icon="plus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">+</a>
+    					</td><td align="center"></td><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemAddDuration" href="" data-role="button" data-iconpos="notext" data-icon="plus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">+</a>    					
+    					</td></tr>
+    					<tr><td id="editWateringPlanItemHour" data-wpi-value="" align="center">--</td><td id="editWateringPlanItemMinute" align="center">--</td><td align="center" class="my-label">for</td><td id="editWateringPlanItemDuration" align="center">--</td></tr>
+    					<tr><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemRemoveHour" href="" data-role="button" data-iconpos="notext" data-icon="minus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">-</a>
+    					</td><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemRemoveMinute" href="" data-role="button" data-iconpos="notext" data-icon="minus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">-</a>
+    					</td><td align="center"></td><td align="center">
+    						<a class="my-centered-anchor" id="editWateringPlanItemRemoveDuration" href="" data-role="button" data-iconpos="notext" data-icon="minus" data-mini="true" data-inline="true" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">-</a>    					
+    					</td></tr>
+    				</table>
+   					<label for="days" class="my-label">On</label>
+   					<div data-role="fieldcontain"><fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDayMo" />
+   						<label for="editWateringPlanItemDayMo">M</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDayTu" />
+   						<label for="editWateringPlanItemDayTu">T</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDayWe" />
+   						<label for="editWateringPlanItemDayWe">W</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDayTh" />
+   						<label for="editWateringPlanItemDayTh">T</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDayFr" />
+   						<label for="editWateringPlanItemDayFr">F</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDaySa" />
+   						<label for="editWateringPlanItemDaySa">S</label>
+   						<input type="checkbox" name="editWateringPlanItemDay" id="editWateringPlanItemDaySu" />
+   						<label for="editWateringPlanItemDaySu">S</label>
+   					</fieldset></div>
+   					<button type="submit" class="ui-btn ui-mini ui-icon-check ui-corner-all">Save</button>
+   					<button type="submit" class="ui-btn ui-mini ui-icon-check ui-corner-all">Delete</button>
+    			</div>
+    		</form>
+    	</div>
 		<div data-role="collapsibleset" data-theme="a" data-content-theme="a"  data-iconpos="right" data-collapsed-icon="arrow-r" data-expanded-icon="arrow-d">
             <div id="collapsible-watering-plan" data-role="collapsible">
                 <h3>Watering plan</h3>
                 <table data-role="table" id="table-column-toggle-watering-plan" data-mode="columntoggle" class="ui-responsive table-stroke">
-					<thead>
-    					<tr>
-      						<th>Output</th>
-      						<th data-priority="1">Starts at</th>
-     					 	<th data-priority="2">Duration</th>
-      						<th data-priority="3">Days of the week</th>
-      						<th data-priority="4">Action</th>
-    					</tr>
-  					</thead>
 					<tbody id="table-body-watering-plan">
 					<tr><td>Loading...</td></tr>
 					</tbody>
@@ -87,10 +121,27 @@
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
-       			<div id="TemperatureChart" class="sensors-chart">Loading 'Temperature' chart...</div>
-       			<div id="HumidityChart" class="sensors-chart">Loading 'Humidity' chart...</div>
-       			<div id="PressureChart" class="sensors-chart">Loading 'Pressure' chart...</div>
+       			<div data-role="popup" id="TemperatureChartPopup" class="ui-content">
+       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       				<div id="TemperatureChart" class="my-chart"></div>
+       			</div>
+        			<div data-role="popup" id="HumidityChartPopup" class="ui-content">
+       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       				<div id="HumidityChart" class="my-chart"></div>
+       			</div>
+       			<div data-role="popup" id="PressureChartPopup" class="ui-content">
+       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       				<div id="PressureChart" class="my-chart"></div>
+       			</div>
             </div>
+            <div id="collapsible-charts" data-role="collapsible">
+                <h3>Graphs</h3>
+                Work in progress<br>
+                <a id="refreshGraphs" href="" data-role="button" data-icon="edit" data-iconpos="left" data-mini="true" data-inline="true" 
+                   data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">Refresh</a>
+
+            </div>
+
   		</div>
   		
   	<?php
@@ -145,16 +196,15 @@ function getWateringPlan(){
  		url: 'php/getWateringPlan.php',                     
         data: "",                       
    	  	dataType: 'json',  
-   	  	async: 'true',         
+   	  	async: 'true', 
+		beforeSend: function(){ $.mobile.loading('show'); },
+		complete: function(){$.mobile.loading('hide'); },        
     	success: function(data) {
    	   		if (data.success == true){
    	   			var _html = '';
    	   			var wateringPlan = data.wateringPlan;
+   	   			var _currentOutput = -1;
    				for(i=0; i < data.itemsNumber; i++){
-   	  				_html += "<tr>";
-   	   				_html += "<td>" + wateringPlan[i]['description'] + "</td>";
-   	   				_html += "<td>" + wateringPlan[i]['startTime'] + "</td>";
-   	   				_html += "<td>" + wateringPlan[i]['duration'] + "</td>";
    	   				var _weekdays = "";
    	   				if(wateringPlan[i]['weekdays'].length >= 7){
    	   					var classActive = "ui-weekday-active";
@@ -202,13 +252,21 @@ function getWateringPlan(){
    	   						}
    	   					}	
    	   				}
-   	   				_html += "<td>" + _weekdays + "</td>";
-   	   				_html += "<td>";
-   	   				_html +="<a href=\"#\" class=\"ui-icon-as-link\"><img src=\"js/images/icons-png/edit-black.png\" /></a>";
-   	   				_html +="<a href=\"#\" class=\"ui-icon-as-link\"><img src=\"js/images/icons-png/delete-black.png\" /></a>";
-   	   				_html += "</td>";
-   	   				//_html += "<td>" + wateringPlan[i]['isOneShot'] + "</td>";
-   	   				//_html += "<td>" + wateringPlan[i]['isForced'] + "</td>";
+   	   				if (_currentOutput != wateringPlan[i]['output']) {
+   	   					_html += "<tr>";
+   	   					_html += "<td class=\"watering-plan-output-name\">" + wateringPlan[i]['description'] + "</td>";
+//   	   				_html += "<td rowspan=\"2\"><a href=\"#\" class=\"ui-icon-as-link\"><img src=\"js/images/icons-png/edit-black.png\" /></a></td>";
+   	   					_html += "</tr>";
+   	   					_currentOutput = wateringPlan[i]['output'];
+   	   				}
+   	   				_html += "<tr class=\"watering-plan-item\" ";
+   	   				_html += "data-wpi-id=\"" + wateringPlan[i]['id'] + "\" ";
+   	   				_html += "data-wpi-description=\"" + wateringPlan[i]['description'] + "\" ";
+    	   			_html += "data-wpi-start-time=\"" + wateringPlan[i]['startTime'] + "\" ";
+   	   				_html += "data-wpi-duration=\"" + wateringPlan[i]['duration'] + "\" ";
+   	   				_html += "data-wpi-weekdays=\"" + wateringPlan[i]['weekdays'] + "\" ";
+  	   				_html += ">";
+   	   				_html += "<td>" + wateringPlan[i]['startTime'] + " for " + wateringPlan[i]['duration'] + " min. on " + _weekdays + "</td>";
    	   				_html += "</tr>";
    	   			}
         		$('#table-body-watering-plan').html(_html); 
@@ -227,7 +285,9 @@ function getOutputsStatus(){
 		url: 'php/getOutputsStatus.php',                     
    		data: "",                       
    	  	dataType: 'json',
-   	  	async: 'true',           
+   	  	async: 'true',    
+		beforeSend: function(){ $.mobile.loading('show'); },
+		complete: function(){$.mobile.loading('hide'); },       
    	   	success: function(data) {
    	   		if (data.success == true){
    	   			var _html = '';
@@ -240,7 +300,7 @@ function getOutputsStatus(){
    	   				_html += "</td></tr>";
    	   			}
         		$('#table-body-outputs').html(_html); 
-		    } else {
+ 		    } else {
         	    $('#table-column-toggle-outputs').html(data.message);
 		    }
       	} 
@@ -255,17 +315,21 @@ function getSensorsValues(){
 	 	url: 'php/getSensorsValues.php',                     
    		data: "",                       
    	  	dataType: 'json', 
-   	  	async: 'true',          
+   	  	async: 'true',      
+		beforeSend: function(){ $.mobile.loading('show'); },
+		complete: function(){$.mobile.loading('hide'); },    
    	   	success: function(data) {
    	   		if (data.success == true){
-	        	var timestamp = data.date;              
-			    var temperature = data.temperature;              
-  			    var humidity = data.humidity;  
-        		var pressure = data.pressure;           
-        		var _html = "<tr><th>Date and time</th><td>"+timestamp+"</td></tr>";
-	        	_html += "<tr><th>Temperature</th><td>"+temperature+" &deg;C</td></tr>";
-    	    	_html += "<tr><th>Humidity</th><td>"+humidity+" %</td></tr>";
-        		_html += "<tr><th>Pressure</th><td>"+pressure+" Pa</td></tr>";
+   	   			var _html = "";
+   	   			_html += "<tr><th>Date and time</th><td>"+data.date+"</td><td>&nbsp;</td></tr>";
+	  	    	_html += "<tr><th>Temperature</th><td>"+data.temperature+" &deg;C</td><td><a id=\"openTemperatureChart\" href=\"#TemperatureChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
+//	        	_html += "<tr><th>Temperature</th><td>"+data.temperature+" &deg;C</td>";
+//	        	_hmtl += "<td><a id=\"openTemperatureChart\" href=\"#TemperatureChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
+//	  	    	_html += "<td><button id=\"btnOpenTemperatureChart\" class=\"ui-btn ui-mini ui-icon-image ui-shadows ui-corner-all ui-btn-inline ui-btn-icon-notext ui-btn-a\">Chart</button></tr>";
+	  	    	_html += "<tr><th>Humidity</th><td>"+data.humidity+" %</td><td><a id=\"openHumidityChart\" href=\"#HumidityChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
+        		_html += "<tr><th>Pressure</th><td>"+data.pressure+" Pa</td><td><a id=\"openPressureChart\" href=\"#PressureChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
+        		_html += "<tr><th>Soil moisture</th><td>"+data.soilMoisture+"</td><td>&nbsp;</td></tr>";
+        		_html += "<tr><th>Luminosity</th><td>"+data.luminosity+" lux</td><td>&nbsp;</td></tr>";
         		$('#table-body-sensors').html(_html); 
 		    } else {
         	    $('#table-column-toggle-sensors').html(data.message);
@@ -279,13 +343,17 @@ function graphSensorsHistory(){
 	 * Retrieve sensors' history
 	 */
     $.ajax({                                      
-	 	url: 'php/getSensorsHistory.php',                     
+	 	//url: 'php/getSensorsHistory.php',     
+	 	url: 'php/getSensorsHistoryMinutes.php',                
    		data: "",                       
    	  	dataType: 'json', 
-   	  	async: 'true',      
+   	  	async: 'true',  
+		beforeSend: function(){ $.mobile.loading('show'); },
+		complete: function(){$.mobile.loading('hide'); },    
    	   	success: function(data) {
-   	   		if (data.success == true){
+   	   		if (data.success == true){	
    	   			var plot = $.jqplot('TemperatureChart',[data.temperature], {
+   	   				title: 'Temperature (°C)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
@@ -299,15 +367,17 @@ function graphSensorsHistory(){
    	   				axes: { 
    	   					xaxis:{
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M' }
+   	   						tickOptions: { formatString: '%H:%M' },
+   	   						min: data.temperature[(data.temperature).length-1][0],
+   	   						max: data.temperature[0][0]
    	   					},
    	   					yaxis: {
-   	   						label: 'Temperature (°C)',
    	   						tickOptions: { formatString: '%.2f'}
    	   					},
    	   				}
    	   			}).replot();
    	   			var plot1 = $.jqplot('HumidityChart',[data.humidity], {
+   	   				title: 'Humidity (%)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
@@ -321,15 +391,17 @@ function graphSensorsHistory(){
    	   				axes: { 
    	   					xaxis:{
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'}
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.humidity[(data.humidity).length-1][0],
+   	   						max: data.humidity[0][0]
    	   					},
    	   					yaxis: {
-   	   						label: 'Humidity (%)',
    	   						tickOptions: { formatString: '%.2f'}
    	   					}
    	   				}
    	   			}).replot();   	   			
    	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
+   	   				title: 'Pressure (Pa)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
@@ -343,11 +415,12 @@ function graphSensorsHistory(){
    	   				axes: { 
    	   					xaxis:{
    	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'}
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
    	   					},
    	   					yaxis: {
-   	   						label: 'Pressure (Pa)',
-   	   						tickOptions: { formatString: '%.2f'}
+   	   						tickOptions: { formatString: '%.1f'}
    	   					}
    	   				}
    	   			}).replot();
@@ -359,22 +432,234 @@ function graphSensorsHistory(){
     });
 }
 
-function refreshAll(){	
+
+function graphSensorsHistoryFirst(){
+	/**
+	 * Retrieve sensors' history
+	 */
+    $.ajax({                                      
+	 	//url: 'php/getSensorsHistory.php',     
+	 	url: 'php/getSensorsHistoryMinutes.php',                
+   		data: "",                       
+   	  	dataType: 'json', 
+   	  	async: 'true',  
+		beforeSend: function(){ $.mobile.loading('show'); },
+		complete: function(){$.mobile.loading('hide'); },    
+   	   	success: function(data) {
+   	   		if (data.success == true){
+   	   			
+   	   			var plot = $.jqplot('TemperatureChart',[data.temperature], {
+   	   				title: 'Temperature (°C)',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M' },
+   	   						min: data.temperature[(data.temperature).length-1][0],
+   	   						max: data.temperature[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					},
+   	   				}
+   	   			});
+   	   			var plot1 = $.jqplot('HumidityChart',[data.humidity], {
+   	   				title: 'Humidity (%)',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.humidity[(data.humidity).length-1][0],
+   	   						max: data.humidity[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.2f'}
+   	   					}
+   	   				}
+   	   			});   	   			
+   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
+   	   				title: 'Pressure (Pa)',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.1f'}
+   	   					}
+   	   				}
+   	   			});
+		    } else {
+        	    $('sensorsChart').html(data.message);
+        	    console.log("Error retrieving sensors history");
+		    }
+      	} 
+    });
+}
+
+
+$(document).ready(function(){	
 	getWateringPlan();
 	getOutputsStatus();
 	getSensorsValues();
-	graphSensorsHistory();
-}
-
-$(document).ready(function(){	
-		refreshAll();
+	graphSensorsHistoryFirst();
+	$('#refreshGraphs').click(function(){	
+		getWateringPlan();
+		getOutputsStatus();
+		getSensorsValues(); 
+		graphSensorsHistory(); 
+		return false; 
+	});
+	$('#table-column-toggle-watering-plan').on('click', 'tr.watering-plan-item', function(e){
+		e.preventDefault();
+		var id = $(this).attr('data-wpi-id');
+		$('#editWateringPlanItemOutput').html($(this).attr('data-wpi-description'));
+		var item = parseInt(($(this).attr('data-wpi-start-time')).substr(0,2));
+		if(item<9) item = "0" + item.toString();
+		$('#editWateringPlanItemHour').attr('data-wpi-value', item);
+		$('#editWateringPlanItemHour').html(item);
+		item = parseInt(($(this).attr('data-wpi-start-time')).substr(3,2));
+		if(item<9) item = "0" + item.toString();
+		$('#editWateringPlanItemMinute').attr('data-wpi-value', item);
+		$('#editWateringPlanItemMinute').html(item);
+		item = parseInt($(this).attr('data-wpi-duration'));
+		if(item<9) item = "0" + item.toString();
+		$('#editWateringPlanItemDuration').attr('data-wpi-value', item);
+		$('#editWateringPlanItemDuration').html(item);
+		$('#editWateringPlanItemDayMo').prop('checked',false);
+		$('#editWateringPlanItemDayTu').prop('checked',false);
+		$('#editWateringPlanItemDayWe').prop('checked',false);
+		$('#editWateringPlanItemDayTh').prop('checked',false);
+		$('#editWateringPlanItemDayFr').prop('checked',false);
+		$('#editWateringPlanItemDaySa').prop('checked',false);
+		$('#editWateringPlanItemDaySu').prop('checked',false);
+		if ($(this).attr('data-wpi-weekdays').charAt(0) != '0')
+			$('#editWateringPlanItemDayMo').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(1) != '0')
+			$('#editWateringPlanItemDayTu').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(2) != '0')
+			$('#editWateringPlanItemDayWe').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(3) != '0')
+			$('#editWateringPlanItemDayTh').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(4) != '0')
+			$('#editWateringPlanItemDayFr').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(5) != '0')
+			$('#editWateringPlanItemDaySa').prop('checked',true);
+		if ($(this).attr('data-wpi-weekdays').charAt(6) != '0')
+			$('#editWateringPlanItemDaySu').prop('checked',true);
+		$('#editWateringPlanItemDayMo').checkboxradio('refresh');
+		$('#editWateringPlanItemDayTu').checkboxradio('refresh');
+		$('#editWateringPlanItemDayWe').checkboxradio('refresh');
+		$('#editWateringPlanItemDayTh').checkboxradio('refresh');
+		$('#editWateringPlanItemDayFr').checkboxradio('refresh');
+		$('#editWateringPlanItemDaySa').checkboxradio('refresh');
+		$('#editWateringPlanItemDaySu').checkboxradio('refresh');
+		$('#editWateringPlanItem').popup('open');
+	});
+	$('#editWateringPlanItemAddHour').click(function(){
+		var value = parseInt($('#editWateringPlanItemHour').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value + 1;
+		if(value>23) value = 0;
+		$('#editWateringPlanItemHour').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemHour').html(strValue);
+	});
+	$('#editWateringPlanItemAddMinute').click(function(){
+		var value = parseInt($('#editWateringPlanItemMinute').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value + 1;
+		if(value>59) value = 0;
+		$('#editWateringPlanItemMinute').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemMinute').html(strValue);
+	});
+	$('#editWateringPlanItemAddDuration').click(function(){
+		var value = parseInt($('#editWateringPlanItemDuration').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value + 1;
+		if(value>99) value = 0;
+		$('#editWateringPlanItemDuration').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemDuration').html(strValue);
+	});
+	$('#editWateringPlanItemRemoveHour').click(function(){
+		var value = parseInt($('#editWateringPlanItemHour').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value - 1;
+		if(value<0) value = 23;
+		$('#editWateringPlanItemHour').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemHour').html(strValue);
+	});
+	$('#editWateringPlanItemRemoveMinute').click(function(){
+		var value = parseInt($('#editWateringPlanItemMinute').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value - 1;
+		if(value<0) value = 59;
+		$('#editWateringPlanItemMinute').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemMinute').html(strValue);
+	});
+	$('#editWateringPlanItemRemoveDuration').click(function(){
+		var value = parseInt($('#editWateringPlanItemDuration').attr('data-wpi-value'));
+		if(!value) value=0;
+		value = value - 1;
+		if(value<0) value = 99;
+		$('#editWateringPlanItemDuration').attr('data-wpi-value', value);
+		var strValue = "";
+		if(value<10) strValue = "0" + value.toString()
+		else strValue = value.toString();	
+		$('#editWateringPlanItemDuration').html(strValue);
+	});
 });
 
 
-window.setInterval(function(){ getWateringPlan(); }, 60000); //every minute
-window.setInterval(function(){ getOutputsStatus(); }, 10000); //every 10 seconds
-window.setInterval(function(){ getSensorsValues(); }, 10000); //every 10 seconds
-window.setInterval(function(){ graphSensorsHistory(); }, 300000); //every 5 minutes
+//window.setInterval(function(){ getWateringPlan(); }, 60000); //every minute
+//window.setInterval(function(){ getOutputsStatus(); }, 60000); //every 10 seconds
+//window.setInterval(function(){ getSensorsValues(); }, 60000); //every 10 seconds
+//window.setInterval(function(){ graphSensorsHistory(); }, 300000); //every 5 minutes
 
 
 <?php
