@@ -1,19 +1,31 @@
 #include <Wire.h>
-#include <Process.h>
 #include <Console.h>
 #include <DHT.h>
 #include <RTClib.h>
 #include <Adafruit_BMP085.h>
+#include <TSL2561.h>
 
+/*
+ * Define the duration of the main loop
+ * in microseconds. 1 second is 1.000.000 microseconds
+ * _previousMicros is a global variable used
+ * to control cycle duration without delay function
+ */
+#define CYCLEDURATION 1000000
+unsigned long _previousMicros = 0;
+ 
 //Definition of the pin connected to the DHT sensor
 #define DHTPIN 8    
 #define DHTTYPE DHT22 
 
 //Definition of the pin connected to the soil moisture sensor
-#define SOILMOISTUREPIN 14 
+#define SOILMOISTUREPIN A0
 
-//Definition of the general purpose led used tfor diagnosys
+//Definition of the general purpose led used for diagnosys
 #define LEDPIN 13
+
+//Define if we are in DEBUG mode (1) or not (0)
+#define DEBUG 1
 
 //Definition of the pin connected to the output
 const int outputPin[] = {4, 5, 6, 7};
@@ -22,8 +34,40 @@ const int outputPin[] = {4, 5, 6, 7};
 DHT dht(DHTPIN, DHTTYPE);
 RTC_DS1307 rtc;
 Adafruit_BMP085 bmp;
+TSL2561 tsl(TSL2561_ADDR_FLOAT); 
+
+/*
+ * Definition of global variables used to 
+ * store values of the sensors
+ */
+float _humidity = 0.0;
+float _temperature = 0.0;
+unsigned long _pressure = 0;
+int _soilMoisture = 0;
+
+/*
+ * Global variable used to count the
+ * number of samples of the sensors.
+ * Needed to calculate the average values
+ */
+int _samplesNumber = 0;
+
+/* 
+ * Define a set of boolean to trace if 
+ * a sensor/input is present and if
+ * it works fine
+ */
+bool isRealTimeClockWorking = false;
+bool isTemperatureSensorWorking = false;
+bool isHumiditySensorWorking = false;
+bool isPressureSensorWorking = false;
+bool isSoilMoistureSensorWorking = false;
+bool isLuminositySensorWorking = false;
 
 void setup() {
+  // Inform we are in the setup function
+  Bridge.put(String("isSetupRunning"), String(true));
+
   // Prepare the onboard led to blink once and then stay on 
   // until the setup procedure is complete
   pinMode(LEDPIN, OUTPUT);
@@ -42,18 +86,53 @@ void setup() {
   log("Communicating with RTC...");
   rtc.begin();
   if (! rtc.isrunning()) {
+    isRealTimeClockWorking = false;
     log("ERROR: RTC does not work correctly.");
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  } else {
+    isRealTimeClockWorking = true;
   }
 
   // initialize DHT sensor
   log("Communicating with DHT...");
   dht.begin();
+  if (isnan(dht.readTemperature())) {
+    isTemperatureSensorWorking = false;
+    isHumiditySensorWorking = false;
+    log("ERROR: DHT does not work correctly.");
+  } else {
+    isTemperatureSensorWorking = true;
+    isHumiditySensorWorking = true;
+  }
 
   // initialize BMP180 module
   log("Communicating with BMP...");
   if (!bmp.begin()) {
-	 log("ERROR: BMP180 does not work correctly.");
+    isPressureSensorWorking = false;
+    log("ERROR: BMP180 does not work correctly.");
+  } else {
+    isPressureSensorWorking = true;
+  }
+  
+  // initialize TSL module
+  log("Communicating with TSL...");
+  if (!tsl.begin()) {
+    isLuminositySensorWorking = false;
+    log("ERROR: TSL2561 does not work correctly.");
+  } else {
+    isLuminositySensorWorking = true;
+    //tsl.setGain(TSL2561_GAIN_0X);      // set no gain (for bright situtations)
+    tsl.setGain(TSL2561_GAIN_16X);      // set 16x gain (for dim situations)
+    tsl.setTiming(TSL2561_INTEGRATIONTIME_13MS);   // shortest integration time (bright light)
+    //tsl.setTiming(TSL2561_INTEGRATIONTIME_101MS);    // medium integration time (medium light)
+    //tsl.setTiming(TSL2561_INTEGRATIONTIME_402MS);  // longest integration time (dim light)    
+  }
+
+  if (isnan(analogRead(SOILMOISTUREPIN))) {
+    isSoilMoistureSensorWorking = false;
+    log("Failed to read from soil moisture sensor");
+  } else {
+    isSoilMoistureSensorWorking = true;
   }
 
   /*
@@ -74,95 +153,203 @@ void setup() {
     log("Output Pin "+String(outputPin[i]) + " value " + String(digitalRead(outputPin[i])));
   }
   
-  // Setup procedure complete
-  digitalWrite(LEDPIN, LOW);
-}
-
-void loop() {
-  digitalWrite(LEDPIN, HIGH);
-
-  // Read timestamp
-  DateTime now = rtc.now();
-  String _timestamp = formattedDateTime(now);
-  log("Timestamp: " + _timestamp); 
-
-  /* 
-   * Always provide the status of the outputs
-   */
-  int outputsNumber = sizeof(outputPin) / sizeof(int);
-  String _response = "";
-  for(int i=0; i < outputsNumber; i++)
-    _response += "x";
-  Bridge.put("outputResponse", _response);
-  
   /*
-   * Check if there is a request to change the
-   * status of an output and in case change it.
-   * "outputRequest" is the key used to receive 
-   * the request to change the status of the outputs.
-   * '0' means LOW, anything different from '0' means HIGH
-   */
-  char* _output;
-  _output = (char *) malloc(outputsNumber);
-  String key = "outputRequest";
-  if(Bridge.get(key.c_str(), _output, outputsNumber) != 0) {
-    for(int i=0; i < outputsNumber; i++){
-      if (_output[i]=='0')
-        digitalWrite(outputPin[i], LOW);
-      else
-        digitalWrite(outputPin[i], HIGH);
-      log("Output Pin "+String(outputPin[i]) + " value " + _output[i]);
-    }
-  }
-  free(_output);
-  _response = "";
-  for(int i=0; i < outputsNumber; i++)
-    _response += String(digitalRead(outputPin[i]));
-  Bridge.put("outputResponse", _response);
-  log("Output: " + _response); 
-  
-  // Read humidity and temperature from dht sensor
-  int _humidity = (int)(dht.readHumidity()*100.0);
-  int _temperature = (int)(dht.readTemperature()*100.0);
-  if (isnan(_humidity) || isnan(_temperature)) {
-    log("ERROR: Failed to read from DHT sensor");
-  } else {
-    log("Data from DHT sensor: "); 
-    log(" -> Humidity: " + String(((float)_humidity)/100.0) + "%"); 
-    log(" -> Temperature: " + String(((float)_temperature)/100.0) + "*C"); 
-  }
-  
-  // Read pressure and temperature from bmp180 module
-  unsigned long _pressure = bmp.readPressure();
-  int _temperatureBMP = (int)(bmp.readTemperature()*100.0);
-  if (isnan(_pressure) || isnan(_temperatureBMP)) {
-    log("Failed to read from BMP180 module");
-  } else {
-    log("Data from BMP180 module: "); 
-    log(" -> Pressure: " + String((float)(_pressure)/100.0) + "Pa"); 
-    log(" -> Temperature: " + String(((float)_temperatureBMP)/100.0) + "*C");
-  }
-
-  // Read the soil moisture level
-  int _soilMoisture = analogRead(SOILMOISTUREPIN);
-  
-  /*
-   * Make sensors info available to outside
+   * Export the sensors' status outside
    * using the mailbox
    */
-  Bridge.put(String("datetime"), _timestamp);
-  Bridge.put(String("timestamp"), _timestamp);
-  Bridge.put(String("temperature"), String(_temperature));
-  Bridge.put(String("humidity"), String(_humidity));
-  Bridge.put(String("pressure"), String(_pressure));
-  Bridge.put(String("soil_moisture"), String(_soilMoisture));
-  Bridge.put(String("luminosity"), String(""));
-
-  // Turn off the led to indicate the cycle has been completed
-  digitalWrite(LEDPIN, LOW);
+  Bridge.put(String("isRealTimeClockWorking"), String(isRealTimeClockWorking));
+  Bridge.put(String("isTemperatureSensorWorking"), String(isTemperatureSensorWorking));
+  Bridge.put(String("isHumiditySensorWorking"), String(isHumiditySensorWorking));
+  Bridge.put(String("isPressureSensorWorking"), String(isPressureSensorWorking));
+  Bridge.put(String("isSoilMoistureSensorWorking"), String(isSoilMoistureSensorWorking));
+  Bridge.put(String("isLuminositySensorWorking"), String(isLuminositySensorWorking));
   
-  //Wait one second
-  delay(1000);
+  /*
+   * This is a reset of the variable just to be sure
+   * we will not enter the main loop with no samples.
+   * We are so close to the place where the cycle duration
+   * is estimated that the difference between the _previousMicros
+   * values and the currentMicros values is so small that 
+   * we are pretty sure we will not exceed CYCLEDURATION
+   */
+  _previousMicros = micros();
+  
+  // Setup procedure complete
+  digitalWrite(LEDPIN, LOW);
+  Bridge.put(String("isSetupRunning"), String(false));
+}
+
+/*
+ * Main loop
+ */
+void loop() {
+  /*
+   * Get the number of microseconds since the 
+   * program started to execute the cycle every 
+   * CYCLEDURATION microseconds
+   */
+  unsigned long currentMicros  = micros();
+  
+  /*
+   * Export the values of the sensors and execute request
+   * of changing outputs status (if any).
+   */
+  if (currentMicros - _previousMicros > CYCLEDURATION){  
+    _previousMicros = currentMicros;
+  
+    // Inform the cycle has been started
+    digitalWrite(LEDPIN, HIGH);
+
+    // Read timestamp from hte real time clock
+    DateTime now = rtc.now();
+    String _timestamp = formattedDateTime(now);
+  
+    /* 
+     * Always provide the status of the outputs
+     */
+    int outputsNumber = sizeof(outputPin) / sizeof(int);
+    String _response = "";
+    for(int i=0; i < outputsNumber; i++)
+      _response += "x";
+    Bridge.put("outputResponse", _response);
+    
+    /*
+     * Check if there is a request to change the
+     * status of an output and in case change it.
+     * "outputRequest" is the key used to receive 
+     * the request to change the status of the outputs.
+     * '0' means LOW, anything different from '0' means HIGH
+     */
+    char* _output;
+    _output = (char *) malloc(outputsNumber);
+    String key = "outputRequest";
+    if(Bridge.get(key.c_str(), _output, outputsNumber) != 0) {
+      for(int i=0; i < outputsNumber; i++){
+        if (_output[i]=='0')
+          digitalWrite(outputPin[i], LOW);
+        else
+          digitalWrite(outputPin[i], HIGH);
+      }
+    }
+    free(_output);
+    _response = "";
+    for(int i=0; i < outputsNumber; i++)
+      _response += String(digitalRead(outputPin[i]));
+    Bridge.put("outputResponse", _response);
+    
+    /*
+     * Set the convertion factor to be used to
+     * 1) calculate the average of the sensor's 
+     *    values during the current cycle
+     * 2) multiple by 100 to provide the sensors values
+     *    as integer (2 digits after the decimal point)
+     */
+    float convertionFactor = 100.0/_samplesNumber;
+    
+    //Apply the convertion factor to each sensor
+    int _intHumidity = (int)(_humidity*convertionFactor);
+    int _intTemperature = (int)(_temperature*convertionFactor);
+    int _intPressure = (int)(_pressure*convertionFactor/100); //specific correction for pressure sensor
+    int _intSoilMoisture = (int)(_soilMoisture*convertionFactor);
+   
+    // Read lux from the light sensor
+    uint32_t _luminosity = tsl.getFullLuminosity();
+    if (!isnan(_luminosity)) {
+       uint16_t ir, full;
+       ir = _luminosity >> 16;
+       full = _luminosity & 0xFFFF;
+       _luminosity = tsl.calculateLux(full, ir)*100;
+    }
+    
+    int _intLuminosity = (int)_luminosity;
+  
+    /*
+     * The logging has been located in a IF statement
+     * in order to enable/disable it at compilation time
+     * to save the memory used by the sketch when debug 
+     * will be no longer needed 
+     * if(0) = logging disabled
+     * if(1) = logging enabled
+     */
+    if(DEBUG) {
+      log(" - - - - - - - - - - - - - - - - - - - - - - ");
+      log("Timestamp: " + _timestamp); 
+      log("Outputs status ([PinNumber] = 0/1):");
+      String outputLog = " ->";
+      for(int i=0; i < outputsNumber; i++)
+        outputLog += " [" + String(outputPin[i]) + "] = " + String(digitalRead(outputPin[i])) + " ";
+      log(outputLog);
+      log("Sensors values (based on " + String(_samplesNumber) + " samples):");
+      if (isnan(_humidity) || isnan(_temperature)) {
+        log("ERROR: Failed to read from DHT sensor");
+      } else {
+        log(" -> Temperature (DHT): " + String(_intTemperature/100.0) + " *C");
+        log(" -> Humidity    (DHT): " + String(_intHumidity/100.0) + " %");  
+      } 
+      if (isnan(_pressure)) {
+        log("Failed to read from BMP180 module");
+      } else {
+        /*
+         * Here we have to divide by 10.000 because the pressure value from
+         * the sensor is an unsigned long whos last 2 digits are considered
+         * as the decimal part
+         */
+        log(" -> Pressure    (BMP): " + String((float)(_intPressure)/100) + " Pa"); 
+      }
+      if (isnan(_soilMoisture) || _intSoilMoisture < 0 || _intSoilMoisture >= 1024) {
+        log("Failed to read from soil moisture sensor");
+      } else {
+        log(" -> Soil Moisture    : " + String(_intSoilMoisture)); 
+      }
+      if (isnan(_luminosity)) {
+        log("Failed to read from TSL2561 module");
+      } else {
+        log(" -> Luminosity  (TSL): " + String(_intLuminosity/100) + " Lux"); 
+      }
+    } 
+    
+    /*
+     * Make sensors info available to outside
+     * using the mailbox
+     */
+    Bridge.put(String("datetime"), _timestamp);
+    Bridge.put(String("timestamp"), _timestamp);
+    Bridge.put(String("temperature"), String(_intTemperature));
+    Bridge.put(String("humidity"), String(_intHumidity));
+    Bridge.put(String("pressure"), String(_intPressure));
+    Bridge.put(String("soilMoisture"), String(_intSoilMoisture));
+    Bridge.put(String("luminosity"), String(_intLuminosity));
+  
+    // Reset the global variables for the next cycle
+    _humidity = 0;
+    _temperature = 0;
+    _pressure = 0;
+    _soilMoisture = 0;
+    _samplesNumber = 0;
+  
+    // Turn off the led to indicate the cycle has been completed
+    digitalWrite(LEDPIN, LOW);
+  } //end of IF statement to execute the cycle every CYCLEDURATION micros
+  
+  /*
+   * If it is not time to export the values of the sensors
+   * and change the outputs, keep collecting sensors samples
+   */
+  else   
+  {
+    // Read humidity and temperature from dht sensor
+    _humidity += dht.readHumidity();
+    _temperature += dht.readTemperature();
+  
+    // Read pressure and temperature from bmp180 module
+    _pressure += bmp.readPressure();
+    
+    // Read the soil moisture level
+    _soilMoisture += analogRead(SOILMOISTUREPIN);
+    
+    //Increase number of samples
+    _samplesNumber++;
+   }
 }
 
 /*
@@ -194,12 +381,10 @@ String print2Char(int value){
 }
 
 void logBegin(){
-  if(0) {
-    Serial.begin(9600);
-    while (!Serial);
-  }  
+  Serial.begin(9600);
+  while (!Serial);
 }
 
 void log(String message){
-  if(0) Serial.println(message);
+  Serial.println(message);
 }
