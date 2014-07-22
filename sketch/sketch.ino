@@ -25,7 +25,7 @@ unsigned long _previousMicros = 0;
 #define LEDPIN 13
 
 //Define if we are in DEBUG mode (1) or not (0)
-#define DEBUG 1
+#define DEBUG 0
 
 //Definition of the pin connected to the output
 const int outputPin[] = {4, 5, 6, 7};
@@ -247,11 +247,11 @@ void loop() {
     float convertionFactor = 100.0/_samplesNumber;
     
     //Apply the convertion factor to each sensor
-    int _intHumidity = (int)(_humidity*convertionFactor);
-    int _intTemperature = (int)(_temperature*convertionFactor);
-    int _intPressure = (int)(_pressure*convertionFactor/100); //specific correction for pressure sensor
-    int _intSoilMoisture = (int)(_soilMoisture*convertionFactor);
-   
+    unsigned long _ulHumidity = (unsigned long)(_humidity*convertionFactor);
+    unsigned long _ulTemperature = (unsigned long)(_temperature*convertionFactor);
+    unsigned long _ulPressure = (unsigned long)(_pressure*convertionFactor/100); //specific correction for pressure sensor
+    unsigned long _ulSoilMoisture = (unsigned long)(_soilMoisture*convertionFactor);
+    
     // Read lux from the light sensor
     uint32_t _luminosity = tsl.getFullLuminosity();
     if (!isnan(_luminosity)) {
@@ -261,7 +261,7 @@ void loop() {
        _luminosity = tsl.calculateLux(full, ir)*100;
     }
     
-    int _intLuminosity = (int)_luminosity;
+    unsigned long _ulLuminosity = (unsigned long)_luminosity;
   
     /*
      * The logging has been located in a IF statement
@@ -283,8 +283,8 @@ void loop() {
       if (isnan(_humidity) || isnan(_temperature)) {
         log("ERROR: Failed to read from DHT sensor");
       } else {
-        log(" -> Temperature (DHT): " + String(_intTemperature/100.0) + " *C");
-        log(" -> Humidity    (DHT): " + String(_intHumidity/100.0) + " %");  
+        log(" -> Temperature (DHT): " + String(_ulTemperature/100.0) + " *C");
+        log(" -> Humidity    (DHT): " + String(_ulHumidity/100.0) + " %");  
       } 
       if (isnan(_pressure)) {
         log("Failed to read from BMP180 module");
@@ -294,17 +294,17 @@ void loop() {
          * the sensor is an unsigned long whos last 2 digits are considered
          * as the decimal part
          */
-        log(" -> Pressure    (BMP): " + String((float)(_intPressure)/100) + " Pa"); 
+        log(" -> Pressure    (BMP): " + String((float)(_ulPressure)/100) + " Pa"); 
       }
-      if (isnan(_soilMoisture) || _intSoilMoisture < 0 || _intSoilMoisture >= 1024) {
+      if (isnan(_soilMoisture)) {
         log("Failed to read from soil moisture sensor");
       } else {
-        log(" -> Soil Moisture    : " + String(_intSoilMoisture)); 
+        log(" -> Soil Moisture    : " + String((float)(_ulSoilMoisture)/100)); 
       }
       if (isnan(_luminosity)) {
         log("Failed to read from TSL2561 module");
       } else {
-        log(" -> Luminosity  (TSL): " + String(_intLuminosity/100) + " Lux"); 
+        log(" -> Luminosity  (TSL): " + String(_ulLuminosity/100) + " Lux"); 
       }
     } 
     
@@ -314,11 +314,11 @@ void loop() {
      */
     Bridge.put(String("datetime"), _timestamp);
     Bridge.put(String("timestamp"), _timestamp);
-    Bridge.put(String("temperature"), String(_intTemperature));
-    Bridge.put(String("humidity"), String(_intHumidity));
-    Bridge.put(String("pressure"), String(_intPressure));
-    Bridge.put(String("soilMoisture"), String(_intSoilMoisture));
-    Bridge.put(String("luminosity"), String(_intLuminosity));
+    Bridge.put(String("temperature"), String(_ulTemperature));
+    Bridge.put(String("humidity"), String(_ulHumidity));
+    Bridge.put(String("pressure"), String(_ulPressure));
+    Bridge.put(String("soilMoisture"), String(_ulSoilMoisture));
+    Bridge.put(String("luminosity"), String(_ulLuminosity));
   
     // Reset the global variables for the next cycle
     _humidity = 0;
@@ -337,11 +337,11 @@ void loop() {
    */
   else   
   {
-    // Read humidity and temperature from dht sensor
+    // Read the humidity and the temperature from dht sensor
     _humidity += dht.readHumidity();
     _temperature += dht.readTemperature();
   
-    // Read pressure and temperature from bmp180 module
+    // Read the pressure from bmp180 module
     _pressure += bmp.readPressure();
     
     // Read the soil moisture level
