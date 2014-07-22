@@ -29,6 +29,7 @@ unsigned long _previousMicros = 0;
 
 //Definition of the pin connected to the output
 const int outputPin[] = {4, 5, 6, 7};
+unsigned int _outputsNumber = 0;
 
 //Definition of the global variables
 DHT dht(DHTPIN, DHTTYPE);
@@ -44,6 +45,7 @@ float _humidity = 0.0;
 float _temperature = 0.0;
 unsigned long _pressure = 0;
 int _soilMoisture = 0;
+uint16_t _ir, _full;
 
 /*
  * Global variable used to count the
@@ -121,11 +123,8 @@ void setup() {
     log("ERROR: TSL2561 does not work correctly.");
   } else {
     isLuminositySensorWorking = true;
-    //tsl.setGain(TSL2561_GAIN_0X);      // set no gain (for bright situtations)
     tsl.setGain(TSL2561_GAIN_16X);      // set 16x gain (for dim situations)
     tsl.setTiming(TSL2561_INTEGRATIONTIME_13MS);   // shortest integration time (bright light)
-    //tsl.setTiming(TSL2561_INTEGRATIONTIME_101MS);    // medium integration time (medium light)
-    //tsl.setTiming(TSL2561_INTEGRATIONTIME_402MS);  // longest integration time (dim light)    
   }
 
   if (isnan(analogRead(SOILMOISTUREPIN))) {
@@ -140,16 +139,16 @@ void setup() {
    * "outputResponse" is the key used to inform about 
    * the status of the ouput
    */
-  int outputsNumber = sizeof(outputPin) / sizeof(int);
-  for(int i=0; i < outputsNumber; i++) {
+  _outputsNumber = sizeof(outputPin) / sizeof(int);
+  for(int i=0; i < _outputsNumber; i++) {
     pinMode(outputPin[i], OUTPUT);
     digitalWrite(outputPin[i], LOW);
   }
   String _response = "";
-  for(int i=0; i < outputsNumber; i++)
+  for(int i=0; i < _outputsNumber; i++)
     _response += String(digitalRead(outputPin[i]));
   Bridge.put("outputResponse", _response);
-  for(int i=0; i < outputsNumber; i++) {
+  for(int i=0; i < _outputsNumber; i++) {
     log("Output Pin "+String(outputPin[i]) + " value " + String(digitalRead(outputPin[i])));
   }
   
@@ -207,9 +206,8 @@ void loop() {
     /* 
      * Always provide the status of the outputs
      */
-    int outputsNumber = sizeof(outputPin) / sizeof(int);
     String _response = "";
-    for(int i=0; i < outputsNumber; i++)
+    for(int i=0; i < _outputsNumber; i++)
       _response += "x";
     Bridge.put("outputResponse", _response);
     
@@ -220,20 +218,18 @@ void loop() {
      * the request to change the status of the outputs.
      * '0' means LOW, anything different from '0' means HIGH
      */
-    char* _output;
-    _output = (char *) malloc(outputsNumber);
+    char _output[_outputsNumber];
     String key = "outputRequest";
-    if(Bridge.get(key.c_str(), _output, outputsNumber) != 0) {
-      for(int i=0; i < outputsNumber; i++){
+    if(Bridge.get(key.c_str(), _output, _outputsNumber) != 0) {
+      for(int i=0; i < _outputsNumber; i++){
         if (_output[i]=='0')
           digitalWrite(outputPin[i], LOW);
         else
           digitalWrite(outputPin[i], HIGH);
       }
     }
-    free(_output);
     _response = "";
-    for(int i=0; i < outputsNumber; i++)
+    for(int i=0; i < _outputsNumber; i++)
       _response += String(digitalRead(outputPin[i]));
     Bridge.put("outputResponse", _response);
     
@@ -251,18 +247,8 @@ void loop() {
     unsigned long _ulTemperature = (unsigned long)(_temperature*convertionFactor);
     unsigned long _ulPressure = (unsigned long)(_pressure*convertionFactor/100); //specific correction for pressure sensor
     unsigned long _ulSoilMoisture = (unsigned long)(_soilMoisture*convertionFactor);
-    
-    // Read lux from the light sensor
-    uint32_t _luminosity = tsl.getFullLuminosity();
-    if (!isnan(_luminosity)) {
-       uint16_t ir, full;
-       ir = _luminosity >> 16;
-       full = _luminosity & 0xFFFF;
-       _luminosity = tsl.calculateLux(full, ir)*100;
-    }
-    
-    unsigned long _ulLuminosity = (unsigned long)_luminosity;
-  
+    unsigned long _ulLuminosity = (unsigned long)(tsl.calculateLux(_full/_samplesNumber, _ir/_samplesNumber)*100);
+      
     /*
      * The logging has been located in a IF statement
      * in order to enable/disable it at compilation time
@@ -276,7 +262,7 @@ void loop() {
       log("Timestamp: " + _timestamp); 
       log("Outputs status ([PinNumber] = 0/1):");
       String outputLog = " ->";
-      for(int i=0; i < outputsNumber; i++)
+      for(int i=0; i < _outputsNumber; i++)
         outputLog += " [" + String(outputPin[i]) + "] = " + String(digitalRead(outputPin[i])) + " ";
       log(outputLog);
       log("Sensors values (based on " + String(_samplesNumber) + " samples):");
@@ -301,7 +287,7 @@ void loop() {
       } else {
         log(" -> Soil Moisture    : " + String((float)(_ulSoilMoisture)/100)); 
       }
-      if (isnan(_luminosity)) {
+      if (isnan(_ulLuminosity)) {
         log("Failed to read from TSL2561 module");
       } else {
         log(" -> Luminosity  (TSL): " + String(_ulLuminosity/100) + " Lux"); 
@@ -325,6 +311,8 @@ void loop() {
     _temperature = 0;
     _pressure = 0;
     _soilMoisture = 0;
+    _ir = 0;
+    _full = 0;
     _samplesNumber = 0;
   
     // Turn off the led to indicate the cycle has been completed
@@ -346,6 +334,14 @@ void loop() {
     
     // Read the soil moisture level
     _soilMoisture += analogRead(SOILMOISTUREPIN);
+    
+        // Read lux from the light sensor
+    uint32_t luminosity = tsl.getFullLuminosity();
+    if (!isnan(luminosity)) {
+       uint16_t ir, full;
+       _ir += luminosity >> 16;
+       _full += luminosity & 0xFFFF;
+    }
     
     //Increase number of samples
     _samplesNumber++;

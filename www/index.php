@@ -133,6 +133,14 @@
        				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
        				<div id="PressureChart" class="my-chart"></div>
        			</div>
+       			<div data-role="popup" id="SoilMoistureChartPopup" class="ui-content">
+       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       				<div id="SoilMoistureChart" class="my-chart"></div>
+       			</div>
+       			<div data-role="popup" id="LuminosityChartPopup" class="ui-content">
+       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       				<div id="LuminosityChart" class="my-chart"></div>
+       			</div>
             </div>
             <div id="collapsible-charts" data-role="collapsible">
                 <h3>Graphs</h3>
@@ -328,8 +336,8 @@ function getSensorsValues(){
 //	  	    	_html += "<td><button id=\"btnOpenTemperatureChart\" class=\"ui-btn ui-mini ui-icon-image ui-shadows ui-corner-all ui-btn-inline ui-btn-icon-notext ui-btn-a\">Chart</button></tr>";
 	  	    	_html += "<tr><th>Humidity</th><td>"+data.humidity+" %</td><td><a id=\"openHumidityChart\" href=\"#HumidityChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
         		_html += "<tr><th>Pressure</th><td>"+data.pressure+" Pa</td><td><a id=\"openPressureChart\" href=\"#PressureChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
-        		_html += "<tr><th>Soil moisture</th><td>"+data.soilMoisture+"</td><td>&nbsp;</td></tr>";
-        		_html += "<tr><th>Luminosity</th><td>"+data.luminosity+" lux</td><td>&nbsp;</td></tr>";
+        		_html += "<tr><th>Soil moisture</th><td>"+data.soilMoisture+"</td><td><a id=\"openSoilMoistureChart\" href=\"#SoilMoistureChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
+        		_html += "<tr><th>Luminosity</th><td>"+data.luminosity+" lux</td><td><a id=\"openLuminosityChart\" href=\"#LuminosityChartPopup\" data-rel=\"popup\">chart</a></td></tr>";
         		$('#table-body-sensors').html(_html); 
 		    } else {
         	    $('#table-column-toggle-sensors').html(data.message);
@@ -356,7 +364,8 @@ function graphSensorsHistory(){
    	   				title: 'Temperature (°C)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true}
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
    	   				},
    	   				axesDefaults: {
    	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
@@ -380,7 +389,8 @@ function graphSensorsHistory(){
    	   				title: 'Humidity (%)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true}
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
    	   				},
    	   				axesDefaults: {
    	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
@@ -404,7 +414,58 @@ function graphSensorsHistory(){
    	   				title: 'Pressure (Pa)',
    	   				seriesDefaults: {
    	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true}
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.1f'}
+   	   					}
+   	   				}
+   	   			}).replot();  	   			
+   	   			var plot3 = $.jqplot('SoilMoistureChart',[data.soilMoisture], {
+   	   				title: 'Soil Moisture',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.1f'}
+   	   					}
+   	   				}
+   	   			}).replot();  	   			
+   	   			var plot4 = $.jqplot('LuminosityChart',[data.luminosity], {
+   	   				title: 'Luminosity (Lux)',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
    	   				},
    	   				axesDefaults: {
    	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
@@ -501,6 +562,56 @@ function graphSensorsHistoryFirst(){
    	   				seriesDefaults: {
    	   					showMarker: false, 
    	   					rendererOptions:{smooth: true}
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.1f'}
+   	   					}
+   	   				}
+   	   			});  	   			
+   	   			var plot3 = $.jqplot('SoilMoistureChart',[data.soilMoisture], {
+   	   				title: 'Soil Moisture',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
+   	   				},
+   	   				axesDefaults: {
+   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+   	   					labelOptions: {
+          					fontSize: '0.75em'
+          				}
+   	   				},
+   	   				axes: { 
+   	   					xaxis:{
+   	   						renderer: $.jqplot.DateAxisRenderer,
+   	   						tickOptions: { formatString: '%H:%M'},
+   	   						min: data.pressure[(data.pressure).length-1][0],
+   	   						max: data.pressure[0][0]
+   	   					},
+   	   					yaxis: {
+   	   						tickOptions: { formatString: '%.1f'}
+   	   					}
+   	   				}
+   	   			});  	   			
+   	   			var plot4 = $.jqplot('LuminosityChart',[data.luminosity], {
+   	   				title: 'Luminosity (Lux)',
+   	   				seriesDefaults: {
+   	   					showMarker: false, 
+   	   					rendererOptions:{smooth: true},
+   	   					breakOnNull: true
    	   				},
    	   				axesDefaults: {
    	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,

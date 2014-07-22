@@ -326,7 +326,8 @@ try:
 		_loopStartTime = int(time.time() * 1000)
 		
 		# Store output status every one minute
-		if int(_loopStartTime/60000) != _lastStartTime:
+		logging.info('Setup running? ' + theBridge.getValue('isSetupRunning'))
+		if (int(_loopStartTime/60000) != _lastStartTime and theBridge.getValue('isSetupRunning') == False):
 			storeSensorsValues(theBridge.getValue('temperature'), theBridge.getValue('humidity'), theBridge.getValue('pressure'), theBridge.getValue('soilMoisture'), theBridge.getValue('luminosity'))
 			_lastStartTime = int(_loopStartTime/60000)
 			
