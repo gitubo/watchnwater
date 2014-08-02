@@ -53,7 +53,7 @@ class WnWBridge:
 
 	# Return the error message
 	def getErrorMessage(self):
-		return self.returnMessage			
+		return self.errorMessage			
 
 	# Return the value associated to the passed key
 	# _key the key we want to know the value associated: string
@@ -84,7 +84,8 @@ class WnWBridge:
 	# _value the vale: string
 	# The function read the value just written and
 	# returns False if the value is not the same
-	# True if the value has been correctly written
+	# or the timeout has been exceeded
+	# Otherwise it returns True
 	def putValue(self, _key, _value):
 		if self.bridge == None:
 			self.errorMessage = 'Bridge is not connected, establish connection before setting any value'
@@ -96,10 +97,10 @@ class WnWBridge:
 			if not r is None:                                                
 				try:                                 
 					if (r['key'] == _key and r['value'] == _value):                               
-						return r['value']                               
+						return True                              
 				except Exception as error:
 					self.errorMessage = 'Bridge execution exception: ' + str(error)
 					return False                                                  
 			timeout -= 0.1                                                            
 			sleep(0.1)
-		return True  
+		return False  

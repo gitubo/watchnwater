@@ -67,13 +67,18 @@ CREATE TABLE actions (
     description         VARCHAR( 128 )   NOT NULL
 );
 
-INSERT INTO [actions] ([id], [description]) VALUES (0, 'Turned OFF as default choise');
-INSERT INTO [actions] ([id], [description]) VALUES (1, 'Turned ON as per watering plan');
-INSERT INTO [actions] ([id], [description]) VALUES (2, 'Turned OFF as per watering plan');
-INSERT INTO [actions] ([id], [description]) VALUES (3, 'Turned ON [forced]');
-INSERT INTO [actions] ([id], [description]) VALUES (4, 'Turned OFF [forced]');
-INSERT INTO [actions] ([id], [description]) VALUES (5, 'Turned ON after evaluation');
-INSERT INTO [actions] ([id], [description]) VALUES (6, 'Turned OFF after evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES ( 1, 'Turned OFF as default choise');
+INSERT INTO [actions] ([id], [description]) VALUES (10, 'Turned ON as per watering plan');
+INSERT INTO [actions] ([id], [description]) VALUES (11, 'Turned OFF as per watering plan');
+INSERT INTO [actions] ([id], [description]) VALUES (20, 'Turned ON [forced]');
+INSERT INTO [actions] ([id], [description]) VALUES (21, 'Turned OFF [forced]');
+INSERT INTO [actions] ([id], [description]) VALUES (30, 'Turned ON after evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (31, 'Turned OFF after soil moisture evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (32, 'Turned OFF after weather evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (33, 'Turned OFF after evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (34, 'Keep OFF after soil moisture evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (35, 'Keep OFF after weather evaluation');
+INSERT INTO [actions] ([id], [description]) VALUES (36, 'Keep OFF after evaluation');
 
 -- Table: actions_log
 CREATE TABLE actions_log (

@@ -1,14 +1,28 @@
 #Import sqlite3 library
 import sqlite3 as lite
+from datetime import datetime, timedelta
 
 #Definition of action types
-ACTION_TURNOFF_DEFAULT = 0
-ACTION_TURNON_AS_PER_WATERING_PLAN = 1
-ACTION_TURNOFF_AS_PER_WATERING_PLAN = 2
-ACTION_TURNON_FORCED = 3
-ACTION_TURNOFF_FORCED = 4
-ACTION_TURNON_AFTER_EVALUATION= 5
-ACTION_TURNOFF_AFTER_EVALUATION = 6
+ACTION_TURNOFF_DEFAULT = 1
+ACTION_TURNON_AS_PER_WATERING_PLAN = 10 
+ACTION_TURNOFF_AS_PER_WATERING_PLAN = 11 
+ACTION_TURNON_FORCED = 20 
+ACTION_TURNOFF_FORCED = 21 
+ACTION_TURNON_AFTER_EVALUATION= 30 
+ACTION_TURNOFF_AFTER_SOIL_MOISTURE_EVALUATION = 31 
+ACTION_TURNOFF_AFTER_WEATHER_EVALUATION = 32
+ACTION_TURNOFF_AFTER_EVALUATION = 33
+ACTION_KEEPOFF_AFTER_SOIL_MOISTURE_EVALUATION = 34
+ACTION_KEEPOFF_AFTER_WEATHER_EVALUATION = 35
+ACTION_KEEPOFF_AFTER_EVALUATION = 36
+
+
+#Definition of sensor types
+SENSOR_TYPE_TEMPERATURE = 0
+SENSOR_TYPE_HUMIDITY = 1
+SENSOR_TYPE_PRESSURE = 2
+SENSOR_TYPE_SOIL_MOISTURE = 3
+SENSOR_TYPE_LUMINOSITY = 4
 
 #Return code to be used in case of invalid counter
 DBERROR_INVALID_COUNT = -1
@@ -92,6 +106,23 @@ class WnWDatabaseConnection:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return None
 	
+	def getLatestSensorsValues(self, _sensorType, _numberOfValues):
+		self.errorMEssage = ''
+		try:
+			_retArray = []
+			cur = self.dbConnection.cursor()
+			cur.execute('SELECT temperature, humidity, pressure, soil_moisture, luminosity FROM sensors_log ORDER BY [date] desc LIMIT ?', (str(_numberOfValues),))
+			rows = cur.fetchall()
+			if (_sensorType < 0 or _sensorType > 4):
+				self.errorMessage = "Invalid sensor type passed";
+				return None
+			for row in rows:
+				_retArray.append(row[_sensorType]/100)
+			return _retArray			
+		except Exception as error:
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
+			return None
+	
 	# Store the value of the outputs
 	# _timestamp: the datetime when the output has been read
 	# _status: a string of '0' or '1' encoding the status of the outputs
@@ -142,3 +173,40 @@ class WnWDatabaseConnection:
 		except Exception as error:
 			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
 			return False
+
+
+	def getLatestPressureDifferences(self):
+		self.errorMessage = ''
+		try:
+			retValues = []
+			dateTo = datetime.now()  
+			dateFrom = dateTo - timedelta(minutes=10)
+			cur = self.dbConnection.cursor()
+			_currentPressure = 0
+			for x in range(0, 4):
+				sql = "select pressure from sensors_log where [date] between datetime('" + dateFrom.strftime("%Y-%m-%d %H:%M:%S") + "') and datetime('" + dateTo.strftime("%Y-%m-%d %H:%M:%S") + "') limit 10"
+				cur.execute(sql)
+				_samples = 0
+				pressure = 0
+				for row in cur:
+					pressure += row[0]
+					_samples += 1
+				if _samples > 0:
+					pressure /= _samples
+				else:
+					pressure = None
+				if x != 0:
+					if (_currentPressure != None and pressure != None):
+						retValues.append(_currentPressure - pressure)
+					else:
+						retValues.append(null)
+				else:
+					_currentPressure = pressure				
+				dateTo = dateTo - timedelta(hours=1)
+				dateFrom = dateTo - timedelta(minutes=10)
+				
+			return retValues				
+			
+		except Exception as error:
+			self.errorMessage = 'SQLite3 execution exception: ' + str(error)
+			return None

@@ -24,8 +24,8 @@ unsigned long _previousMicros = 0;
 //Definition of the general purpose led used for diagnosys
 #define LEDPIN 13
 
-//Define if we are in DEBUG mode (1) or not (0)
-#define DEBUG 0
+//Define if we are in DEBUG
+//#define DEBUG
 
 //Definition of the pin connected to the output
 const int outputPin[] = {4, 5, 6, 7};
@@ -68,6 +68,7 @@ bool isLuminositySensorWorking = false;
 
 void setup() {
   // Inform we are in the setup function
+  Bridge.begin();
   Bridge.put(String("isSetupRunning"), String(true));
 
   // Prepare the onboard led to blink once and then stay on 
@@ -75,52 +76,71 @@ void setup() {
   pinMode(LEDPIN, OUTPUT);
   digitalWrite(LEDPIN, HIGH);
   
+#ifdef DEBUG
   // initialize serial communication:
   logBegin();
-  Bridge.begin();
   log("You're connected");
+#endif
 
   // initialize I2C
+#ifdef DEBUG
   log("Initializing I2C...");
+#endif
   Wire.begin();
 
   // initialize RealTimeClock module
+#ifdef DEBUG
   log("Communicating with RTC...");
+#endif
   rtc.begin();
   if (! rtc.isrunning()) {
     isRealTimeClockWorking = false;
+#ifdef DEBUG
     log("ERROR: RTC does not work correctly.");
+#endif
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   } else {
     isRealTimeClockWorking = true;
   }
 
   // initialize DHT sensor
+#ifdef DEBUG
   log("Communicating with DHT...");
+#endif
   dht.begin();
   if (isnan(dht.readTemperature())) {
     isTemperatureSensorWorking = false;
     isHumiditySensorWorking = false;
+#ifdef DEBUG
     log("ERROR: DHT does not work correctly.");
+#endif
   } else {
     isTemperatureSensorWorking = true;
     isHumiditySensorWorking = true;
   }
 
   // initialize BMP180 module
+#ifdef DEBUG
   log("Communicating with BMP...");
+#endif
   if (!bmp.begin()) {
     isPressureSensorWorking = false;
+#ifdef DEBUG
     log("ERROR: BMP180 does not work correctly.");
+#endif
   } else {
     isPressureSensorWorking = true;
   }
   
   // initialize TSL module
+#ifdef DEBUG
   log("Communicating with TSL...");
+#endif
   if (!tsl.begin()) {
     isLuminositySensorWorking = false;
+#ifdef DEBUG
     log("ERROR: TSL2561 does not work correctly.");
+#endif
   } else {
     isLuminositySensorWorking = true;
     tsl.setGain(TSL2561_GAIN_16X);      // set 16x gain (for dim situations)
@@ -129,15 +149,17 @@ void setup() {
 
   if (isnan(analogRead(SOILMOISTUREPIN))) {
     isSoilMoistureSensorWorking = false;
+#ifdef DEBUG
     log("Failed to read from soil moisture sensor");
+#endif
   } else {
     isSoilMoistureSensorWorking = true;
   }
 
   /*
-   * Publish current output status through the mailbox
-   * "outputResponse" is the key used to inform about 
-   * the status of the ouput
+   * Reset all the outputs and publish the status 
+   * through the mailbox "outputResponse" is the key 
+   * used to inform about the status of the ouput
    */
   _outputsNumber = sizeof(outputPin) / sizeof(int);
   for(int i=0; i < _outputsNumber; i++) {
@@ -145,12 +167,13 @@ void setup() {
     digitalWrite(outputPin[i], LOW);
   }
   String _response = "";
-  for(int i=0; i < _outputsNumber; i++)
-    _response += String(digitalRead(outputPin[i]));
-  Bridge.put("outputResponse", _response);
   for(int i=0; i < _outputsNumber; i++) {
+    _response += String(digitalRead(outputPin[i]));
+#ifdef DEBUG
     log("Output Pin "+String(outputPin[i]) + " value " + String(digitalRead(outputPin[i])));
+#endif
   }
+  Bridge.put("outputResponse", _response);
   
   /*
    * Export the sensors' status outside
@@ -182,6 +205,29 @@ void setup() {
  * Main loop
  */
 void loop() {
+  
+  /*
+   * Check if there is a request to change the
+   * status of an output and in case change it.
+   * "outputRequest" is the key used to receive 
+   * the request to change the status of the outputs.
+   * '0' means LOW, anything different from '0' means HIGH
+   */  
+  char _output[_outputsNumber];
+  String key = "outputRequest";
+  if(Bridge.get(key.c_str(), _output, _outputsNumber) != 0) {
+    for(int i=0; i < _outputsNumber; i++){
+      if (_output[i]=='0')
+        digitalWrite(outputPin[i], LOW);
+      else
+        digitalWrite(outputPin[i], HIGH);
+    }
+    String _response = "";
+    for(int i=0; i < _outputsNumber; i++)
+      _response += String(digitalRead(outputPin[i]));
+    Bridge.put("outputResponse", _response);
+  }
+  
   /*
    * Get the number of microseconds since the 
    * program started to execute the cycle every 
@@ -203,36 +249,6 @@ void loop() {
     DateTime now = rtc.now();
     String _timestamp = formattedDateTime(now);
   
-    /* 
-     * Always provide the status of the outputs
-     */
-    String _response = "";
-    for(int i=0; i < _outputsNumber; i++)
-      _response += "x";
-    Bridge.put("outputResponse", _response);
-    
-    /*
-     * Check if there is a request to change the
-     * status of an output and in case change it.
-     * "outputRequest" is the key used to receive 
-     * the request to change the status of the outputs.
-     * '0' means LOW, anything different from '0' means HIGH
-     */
-    char _output[_outputsNumber];
-    String key = "outputRequest";
-    if(Bridge.get(key.c_str(), _output, _outputsNumber) != 0) {
-      for(int i=0; i < _outputsNumber; i++){
-        if (_output[i]=='0')
-          digitalWrite(outputPin[i], LOW);
-        else
-          digitalWrite(outputPin[i], HIGH);
-      }
-    }
-    _response = "";
-    for(int i=0; i < _outputsNumber; i++)
-      _response += String(digitalRead(outputPin[i]));
-    Bridge.put("outputResponse", _response);
-    
     /*
      * Set the convertion factor to be used to
      * 1) calculate the average of the sensor's 
@@ -247,17 +263,46 @@ void loop() {
     unsigned long _ulTemperature = (unsigned long)(_temperature*convertionFactor);
     unsigned long _ulPressure = (unsigned long)(_pressure*convertionFactor/100); //specific correction for pressure sensor
     unsigned long _ulSoilMoisture = (unsigned long)(_soilMoisture*convertionFactor);
-    unsigned long _ulLuminosity = (unsigned long)(tsl.calculateLux(_full/_samplesNumber, _ir/_samplesNumber)*100);
-      
+    unsigned long _ulLuminosity = (unsigned long)(tsl.calculateLux(_full/_samplesNumber, _ir/_samplesNumber)*100);  
+
     /*
-     * The logging has been located in a IF statement
+     * Publish the sensors' values through the mailbox
+     */
+    Bridge.put(String("datetime"), _timestamp);
+    Bridge.put(String("timestamp"), _timestamp);
+    Bridge.put(String("temperature"), String(_ulTemperature));
+    Bridge.put(String("humidity"), String(_ulHumidity));
+    Bridge.put(String("pressure"), String(_ulPressure));
+    Bridge.put(String("soilMoisture"), String(_ulSoilMoisture));
+    Bridge.put(String("luminosity"), String(_ulLuminosity));
+        
+    /*
+     * Publish the current status of all the outputs through the mailbox
+     */
+    String _outputStatus = "";
+    for(int i=0; i < _outputsNumber; i++)
+      _outputStatus += String(digitalRead(outputPin[i]));
+    Bridge.put("outputStatus", _outputStatus);
+  
+    // Reset the global variables for the next cycle
+    _humidity = 0;
+    _temperature = 0;
+    _pressure = 0;
+    _soilMoisture = 0;
+    _ir = 0;
+    _full = 0;
+    _samplesNumber = 0;
+  
+    // Turn off the led to indicate the cycle has been completed
+    digitalWrite(LEDPIN, LOW);
+    
+    /*
+     * The logging has been located in a #IFDEF statement
      * in order to enable/disable it at compilation time
      * to save the memory used by the sketch when debug 
      * will be no longer needed 
-     * if(0) = logging disabled
-     * if(1) = logging enabled
      */
-    if(DEBUG) {
+#ifdef DEBUG
       log(" - - - - - - - - - - - - - - - - - - - - - - ");
       log("Timestamp: " + _timestamp); 
       log("Outputs status ([PinNumber] = 0/1):");
@@ -292,31 +337,8 @@ void loop() {
       } else {
         log(" -> Luminosity  (TSL): " + String(_ulLuminosity/100) + " Lux"); 
       }
-    } 
+#endif 
     
-    /*
-     * Make sensors info available to outside
-     * using the mailbox
-     */
-    Bridge.put(String("datetime"), _timestamp);
-    Bridge.put(String("timestamp"), _timestamp);
-    Bridge.put(String("temperature"), String(_ulTemperature));
-    Bridge.put(String("humidity"), String(_ulHumidity));
-    Bridge.put(String("pressure"), String(_ulPressure));
-    Bridge.put(String("soilMoisture"), String(_ulSoilMoisture));
-    Bridge.put(String("luminosity"), String(_ulLuminosity));
-  
-    // Reset the global variables for the next cycle
-    _humidity = 0;
-    _temperature = 0;
-    _pressure = 0;
-    _soilMoisture = 0;
-    _ir = 0;
-    _full = 0;
-    _samplesNumber = 0;
-  
-    // Turn off the led to indicate the cycle has been completed
-    digitalWrite(LEDPIN, LOW);
   } //end of IF statement to execute the cycle every CYCLEDURATION micros
   
   /*

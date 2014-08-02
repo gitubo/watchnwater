@@ -27,12 +27,19 @@ import wnw_bridge as wnwBridge
 #Log file name, absolute path
 LOG_FILENAME = '/mnt/sda1/wnw/log/engine.log'
 #Soil maisture sensor enabling
-SOIL_MOISTURE_SENSOR = False
+SOIL_MOISTURE_SENSOR = True
 #Soil moisture threshold use 
 #to decide if the soil is dry or wet
-SOIL_MOISTURE_THRESHOLD = 1000
+SOIL_MOISTURE_THRESHOLD = 700
 #Weather forecast feature enabling
-WEATHER_FORECAST = False
+WEATHER_FORECAST = True
+DO_NOT_STOP = 0
+STOP_TURNING_ON_OUTPUT_DUE_TO_THE_SOIL_MOISTURE = 1
+STOP_TURNING_ON_OUTPUT_DUE_TO_THE_WEATHER = 2
+PRESSURE_DIFFERENCE_1HOUR  = -200.0
+PRESSURE_DIFFERENCE_2HOURS = -400.0
+PRESSURE_DIFFERENCE_3HOURS = -600.0
+PRESSURE_DELTA = -200.0
 
 #
 #Global variables
@@ -74,7 +81,7 @@ def retrieveWateringPlan():
 	
 	_WATERING_PLAN_ = theDB.getWateringPlan()
 	if _WATERING_PLAN_ != None:
-		logging.debug('Loaded %i record for the watering plan' % len(_WATERING_PLAN_))
+		logging.debug('Loaded %i record(s) from the watering plan' % len(_WATERING_PLAN_))
 	else:
 		logging.error('Invalid watering plan coming from the DB (%s)' % theDB.getErrorMessage())
 		_WATERING_PLAN_ = []			
@@ -165,7 +172,7 @@ def getCurrentStatus(_output):
 	_retVal = None
 	
 	while _in_loop == True:
-		_retVal = theBridge.getValue('outputResponse')
+		_retVal = theBridge.getValue('outputStatus')
 		if _retVal == None: # value not found
 			_in_loop = False
 		elif len(_retVal) >= _output+1: #be sure the value is readable
@@ -209,10 +216,7 @@ def waitForOutputsResponse(_output_number):
 			_retVal = None
 			_in_loop = False
 		
-	if _retVal == None:
-		return None
-	else:
-		return _retVal
+	return _retVal
 
 #
 # Get the status of the actuator as it is supposed to be
@@ -237,39 +241,60 @@ def getExpectedStatus(_output, _nowInSeconds):
 				logging.debug('StartTime %s, duration %i' % (str(wp['startTime']),int(wp['duration'])))
 				_hour = int(str(wp['startTime'])[0:2]); _minute = int(str(wp['startTime'])[3:5])
 				_secondsFrom = _hour * 3600 + _minute * 60;
-				logging.debug('_nowInSeconds=%i, _secondsFrom=%i, secondsTo=%i' % (_nowInSeconds, _secondsFrom, (_secondsFrom + int(wp['duration']) * 60)))
 				if (_nowInSeconds >= _secondsFrom and _nowInSeconds <= (_secondsFrom + int(wp['duration']) * 60) ): # is the right time?
 					logging.debug('Found a match in the watering plan:')
-					logging.debug(' -> output = %i' % wp['output'])
-					logging.debug(' -> weekday = %s (%s)' % (_weekday, wp['weekdays']))
-					logging.debug(' -> time = %s and duration = %i' % (wp['startTime'], wp['duration']))
+					logging.debug(' -> time = %s, duration = %i, weekday = %s (%s)' % (wp['startTime'], wp['duration'], _weekday, wp['weekdays']))
 					if (wp['isForced'] == True or wp['isForced'] == 1):
 						return 2
 					else:
 						return 1
 	return 0
 
-def evaluateTurningOnOutput(_output):
+def stopTurningOnOutput(_output):
 	if SOIL_MOISTURE_SENSOR == True:
-		# TO BE IMPLEMENTED
-		#
 		# We have to consider the avegare value of the soil moisture
 		# Consider that a sample is taken almost every seconds,
 		# so 10 samples means the averege value in 10 seconds (rawly)
 		#
 		logging.debug('Soil moisture evaluation')
-		if getLatestSoilMoistureAverageValue(10) > SOIL_MOISTURE_THRESHOLD:
-			logging.debug('Soil moisture greater than threshold level: output will not be turned ON')
-			return False
+		soilMoistureSamplesNumber = 10
+		soilMoistureValues = theDB.getLatestSensorsValues(wnwDB.SENSOR_TYPE_SOIL_MOISTURE, soilMoistureSamplesNumber)
+		if soilMoistureValues == None:
+			logging.error('Error retrieving sensors values: %s' % theDB.getErrorMessage())
+		else:
+			soilMoistureAverageValue = 0;
+			for sm in soilMoistureValues:
+				soilMoistureAverageValue += sm
+			soilMoistureAverageValue /= soilMoistureSamplesNumber
+			if soilMoistureAverageValue > SOIL_MOISTURE_THRESHOLD:
+				# in case the soil is wet we will not start the watering
+				logging.debug('Soil moisture level (%d) greater than threshold (%d): output will not be turned ON' % (soilMoistureAverageValue,SOIL_MOISTURE_THRESHOLD))
+				return STOP_TURNING_ON_OUTPUT_DUE_TO_THE_SOIL_MOISTURE
 
 	if WEATHER_FORECAST == True:
 		#
 		# We have to consider the weather forecast
 		#
 		logging.debug('Weather forecast evaluation')
+		rainProbability = 0
+		pressureDifferences = theDB.getLatestPressureDifferences()
+		if pressureDifferences == None:
+			logging.warning('No pressure differences evaluated: %s' % theDB.getErrorMessage())
+		else:		
+			logging.debug('Pressure differences: %d %d %d' % (pressureDifferences[0],pressureDifferences[1],pressureDifferences[2]))
+			if (pressureDifferences[0] != None and pressureDifferences[0] < 0):  #difference in the last 1 hour
+				rainProbability += pressureDifferences[0]/PRESSURE_DELTA
+			elif (pressureDifferences[1] != None and pressureDifferences[1] < 0):  #difference in the last 2 hours
+				rainProbability += pressureDifferences[1]/(PRESSURE_DELTA*2)
+			elif (pressureDifferences[2] != None and pressureDifferences[2] < 0):  #difference in the last 3 hours
+				rainProbability += pressureDifferences[2]/(PRESSURE_DELTA*3)
 		
+		if rainProbability >= 1: # It's going to rain
+			logging.info("Evaluating the pressure differences in the last 3 hours, it seems it's going to rain")
+			return STOP_TURNING_ON_OUTPUT_DUE_TO_THE_WEATHER
+
 	# The output must be turned on
-	return True
+	return DO_NOT_STOP
 
 
 ##################
@@ -322,23 +347,33 @@ try:
 		
 	while _STAY_IN_THE_LOOP_:
 	
+		isRunning = theBridge.getValue('isSetupRunning')
+		while isRunning == '1':
+			logging.info('Waiting the board to be ready (isSetupRunning=%s)' % isRunning)
+			sleep(0.5);
+	
 		# Get time to calculate loop duration in milliseconds
 		_loopStartTime = int(time.time() * 1000)
 		
 		# Store output status every one minute
-		logging.info('Setup running? ' + theBridge.getValue('isSetupRunning'))
-		if (int(_loopStartTime/60000) != _lastStartTime and theBridge.getValue('isSetupRunning') == False):
+		if int(_loopStartTime/60000) != _lastStartTime :
 			storeSensorsValues(theBridge.getValue('temperature'), theBridge.getValue('humidity'), theBridge.getValue('pressure'), theBridge.getValue('soilMoisture'), theBridge.getValue('luminosity'))
 			_lastStartTime = int(_loopStartTime/60000)
 			
+		# Retrieve the watering plan (only valid entries)
+		logging.debug('Retrieving watering plan...')
+		retrieveWateringPlan()
+		if len(_WATERING_PLAN_) == 0:
+			logging.warning('No watering plan retrieved... exiting')
+			_STAY_IN_THE_LOOP_ = False
+		
 		# Calculate the number of minutes from midnight 
 		_cHour = time.strftime('%H'); _cMinutes = time.strftime('%M'); _cSeconds = time.strftime('%S')
 		_nowInSeconds = int(_cHour) * 3600 + int(_cMinutes) * 60 + int(_cSeconds);	
-		logging.debug('Current time is %s:%s:%s' % (_cHour,_cMinutes,_cSeconds))
+		logging.debug('Current time is %s:%s:%s (%s seconds from midnight)' % (_cHour,_cMinutes,_cSeconds,_nowInSeconds))
 	
 		# Reset output string to send to the sketch
-		_request = ''
-		
+		_request = ''		
 		_outputRange = range(0,_OUTPUTS_NUMBER_)
 		for _output in _outputRange:
 			logging.debug('Evaluating output %i' % _output)
@@ -352,37 +387,58 @@ try:
 
 			if _expectedStatus == 0:
 				if _currentStatus != 0:
-					logging.debug('Turning OFF output %i ' % _output)
+					logging.info('Turning OFF output %i as per watering plan' % _output)
 					storeAction(_output, wnwDB.ACTION_TURNOFF_AS_PER_WATERING_PLAN)
 				_request += '0'
 			elif _expectedStatus == 1:
-				if evaluateTurningOnOutput(_output) == True:
+				stopWatering = stopTurningOnOutput(_output)
+				if stopWatering == DO_NOT_STOP:
 					if _currentStatus != 1:
-						logging.debug('Turning ON output %i ' % _output)
+						logging.info('Turning ON output %i as per watering plan' % _output)
 						storeAction(_output, wnwDB.ACTION_TURNON_AS_PER_WATERING_PLAN)
 					_request += '1'
 				else:
 					if _currentStatus != 0:
-						logging.debug('Turning OFF output %i ' % _output)
-						storeAction(_output, wnwDB.ACTION_TURNOFF_AFTER_EVALUATION)
+						if stopWatering == STOP_TURNING_ON_OUTPUT_DUE_TO_THE_SOIL_MOISTURE:
+							logging.info('Turning OFF output %i after soil moisture evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_TURNOFF_AFTER_SOIL_MOISTURE_EVALUATION)
+						elif stopWatering == STOP_TURNING_ON_OUTPUT_DUE_TO_THE_WEATHER:
+							logging.info('Turning OFF output %i after weather evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_TURNOFF_AFTER_WEATHER_EVALUATION)
+						else:
+							logging.info('Turning OFF output %i after evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_TURNOFF_AFTER_EVALUATION)
+					else:
+						if stopWatering == STOP_TURNING_ON_OUTPUT_DUE_TO_THE_SOIL_MOISTURE:
+							logging.info('Keep OFF output %i after soil moisture evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_KEEPOFF_AFTER_SOIL_MOISTURE_EVALUATION)
+						elif stopWatering == STOP_TURNING_ON_OUTPUT_DUE_TO_THE_WEATHER:
+							logging.info('Keep OFF output %i after weather evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_KEEPOFF_AFTER_WEATHER_EVALUATION)
+						else:
+							logging.info('Keep OFF output %i after evaluation' % _output)
+							storeAction(_output, wnwDB.ACTION_KEEPOFF_AFTER_EVALUATION)
 					_request += '0'
 			elif _expectedStatus == 2:
 				if _currentStatus != 1:
-					logging.debug('Turning ON output %i [FORCED]' % _output)
+					logging.info('Turning ON output %i as per watering plan [FORCED]' % _output)
 					storeAction(_output, wnwDB.ACTION_TURNON_FORCED)
 				_request += '1'
 			else:
 				logging.warning('Unsupported expected status for output %i' % _output);
-				logging.warning('The output will be turned off!')
+				logging.warning('The output will be turned OFF!')
 				storeAction(_output, wnwDB.ACTION_TURNOFF_DEFAULT)
 				_request += '0'
 
 		# Sending the request to change the output 			
 		logging.debug('Sending output request %s' % _request)
-		_retValue = theBridge.putValue('outputRequest', _request)
-		if _retValue != _request:
-			logging.error('putValue not working as expected')
-
+		_outputRequestResetString = '';
+		for x in range(0, _OUTPUTS_NUMBER_):
+			_outputRequestResetString += 'x'
+		if theBridge.putValue('outputResponse', _outputRequestResetString) == False:
+			logging.error('putValue not working as expected in initializing the outputResponse parameter')
+		if theBridge.putValue('outputRequest', _request) == False:
+			logging.error('putValue not working as expected in writing the outputRequest parameter')
 		_returnValue = waitForOutputsResponse(_OUTPUTS_NUMBER_)
 		if _returnValue == None:
 			logging.error('Output response not present')
@@ -392,7 +448,7 @@ try:
 			if _returnValue == _request:
 				logging.debug('Output change request correctly processed')
 			else:
-				logging.error("The output change request has not been correctly processed (request '%s', response '%s'" % (_request,_returnValue))
+				logging.error("The output change request has not been correctly processed (request '%s', response '%s')" % (_request,_returnValue))
 		
 			# Store output status only if it differs from the previous status
 			if _returnValue != _lastSavedReturnStatus:

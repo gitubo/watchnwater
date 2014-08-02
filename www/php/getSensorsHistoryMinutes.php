@@ -2,15 +2,15 @@
 $dir = 'sqlite:/mnt/sda1/wnw/wnwdb.sqlite';
 $db = new PDO($dir) or die("cannot open database");
 
-//Fetch events from database as associative array
-//$query = 'SELECT [date], temperature, humidity, pressure, soil_moisture, luminosity FROM sensors_log ORDER BY [date] DESC';
-$query = 'SELECT [date],temperature,humidity,pressure,soil_moisture,luminosity FROM sensors_log ORDER BY [date] DESC';
+date_default_timezone_set('Europe/Rome');
 
-if(isset($_POST['limit']) && $_POST['limit']<1440){
-	$query .= ' LIMIT '.$_POST['limit'];
-} else {
-	$query .= ' LIMIT 1440';  //1440 samples, 1 sample per second => 1440 seconds = 24 hours
-}
+$dateTo = date('Y-m-d H:i:s');
+$dateFrom = date('Y-m-d H:i:s', strtotime($dateTo .' -1 day'));
+$dateFrom = date('Y-m-d H:i:s', strtotime($dateFrom .' +1 hours'));
+
+//Fetch events from database as associative array
+$query =  "SELECT [date],temperature,humidity,pressure,soil_moisture,luminosity";
+$query .= " FROM sensors_log where [date] BETWEEN '".date('Y-m-d H:i:s', strtotime($dateFrom))."' AND '".date('Y-m-d H:i:s', strtotime($dateTo))."' order by [date] asc";
 
 $date = array();
 $temperature = array();
@@ -20,10 +20,7 @@ $soilMoisture = array();
 $luminosity = array();
 
 
-date_default_timezone_set('UTC');
-
 foreach ($db->query($query) as $row) {
-	$_date = strftime("%Y-%m-%d %I:%M:%S%p",strtotime($row[0]));
 	$date[] = $row[0];
 	$temperature[] = $row[1];
 	$humidity[] = $row[2];
@@ -32,9 +29,7 @@ foreach ($db->query($query) as $row) {
 	$luminosity[] = $row[5];
 }
 
-//We want to return one sample per minute
-$_MODULE_ = 60;
-$samples = 1;
+//We want to return one sample per hour
 $moduleDate = array();
 $moduleTemperature = array();
 $moduleHumidity = array();
@@ -46,33 +41,50 @@ $_humidity    = 0;
 $_pressure    = 0;
 $_soilMoisture= 0;
 $_luminosity  = 0;
-for ($i=0; $i<count($date); $i++, $samples++){
-	$_temperature += $temperature[$i];
-	$_humidity    += $humidity[$i];
-	$_pressure    += $pressure[$i];
-	$_soilMoisture+= $soilMoisture[$i];
-	$_luminosity  += $luminosity[$i];
-	if ($samples == $_MODULE_){
-		$_date = $date[$i-$_MODULE_+1];
-		$moduleDate[] = $_date;
-		$averageFactor = $_MODULE_*100.0;
-		$moduleTemperature[] = array($_date, $_temperature/$averageFactor);
-		$moduleHumidity[]    = array($_date, $_humidity/$averageFactor);
-		$modulePressure[]    = array($_date, $_pressure/$averageFactor);
-		$moduleSoilMoisture[]= array($_date, $_soilMoisture/$averageFactor);
-		$moduleLuminosity[] = array($_date, $_luminosity/$averageFactor);
-		$samples=0;
+$_samples = 0;
+for ($h=23; $h>=0; $h--){
+	$moduleDate[] = date('Y-m-d H', strtotime($dateTo .' -' . $h . ' hours'));
+}
+$dateBlock = $moduleDate[0];
+for ($i=0, $m=0; $i<count($date); $i++){
+	if($dateBlock == date('Y-m-d H',strtotime($date[$i]))) {
+		$_temperature += $temperature[$i];
+		$_humidity    += $humidity[$i];
+		$_pressure    += $pressure[$i];
+		$_soilMoisture+= $soilMoisture[$i];
+		$_luminosity  += $luminosity[$i];	
+		$_samples++;
+	} else if ($_samples > 0) {
+		$_convertion = $_samples*100.0;
+		$moduleTemperature[] = array($dateBlock, $_temperature/$_convertion);
+		$moduleHumidity[] = array($dateBlock, $_humidity/$_convertion);
+		$modulePressure[] = array($dateBlock, $_pressure/$_convertion);
+		$moduleSoilMoisture[] = array($dateBlock, $_soilMoisture/$_convertion);
+		$moduleLuminosity[] = array($dateBlock, $_luminosity/$_convertion);
+		$m++;
+		$dateBlock = $moduleDate[$m];
 		$_temperature = 0;
 		$_humidity    = 0;
 		$_pressure    = 0;
 		$_soilMoisture= 0;
 		$_luminosity  = 0;
+		$_samples = 0;
+	} else {
+		$moduleTemperature[] = array($dateBlock, null);
+		$moduleHumidity[] = array($dateBlock, null);
+		$modulePressure[] = array($dateBlock, null);
+		$moduleSoilMoisture[] = array($dateBlock, null);
+		$moduleLuminosity[] = array($dateBlock, null);
+		$m++;
+		$dateBlock = $moduleDate[$m];
 	}
 }
 
 if(count($temperature) > 0){
     $data = array('success'=> true,
     			  'message'=>'',
+    			  'dateFrom' => $dateFrom,
+    			  'dateTo' => $dateTo,
     			  'itemsNumber' => count($moduleDate),
     			  'date' => $moduleDate,
     			  'temperature' => $moduleTemperature,
