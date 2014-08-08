@@ -91,8 +91,12 @@
     			</div>
     		</form>
     	</div>
+    	<div data-role="popup" id="ChartPopupContent" class="ui-content">
+       		<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+       		<div id="ChartPopup" class="my-chart"></div>
+       	</div>
     	<div>
-    	<a id="refreshGraphs" href="" data-role="button" data-icon="edit" data-iconpos="left" data-mini="true" data-inline="true" 
+    		<a id="refreshGraphs" href="" data-role="button" data-icon="edit" data-iconpos="left" data-mini="true" data-inline="true" 
                    data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" data-theme="c">Refresh</a>
 		</div>
 		<div data-role="collapsibleset" data-theme="a" data-content-theme="a"  data-iconpos="right" data-collapsed-icon="arrow-r" data-expanded-icon="arrow-d">
@@ -111,10 +115,6 @@
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
-       			<div data-role="popup" id="OutputChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="OutputChart" class="my-chart"></div>
-       			</div>
             </div>
             <div id="collapsible-sensors" data-role="collapsible">
                 <h3>Values of the sensors</h3>
@@ -123,26 +123,6 @@
      				<tr><td>Loading...</td></tr>
        				</tbody>
        			</table>
-       			<div data-role="popup" id="TemperatureChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="TemperatureChart" class="my-chart"></div>
-       			</div>
-        			<div data-role="popup" id="HumidityChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="HumidityChart" class="my-chart"></div>
-       			</div>
-       			<div data-role="popup" id="PressureChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="PressureChart" class="my-chart"></div>
-       			</div>
-       			<div data-role="popup" id="SoilMoistureChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="SoilMoistureChart" class="my-chart"></div>
-       			</div>
-       			<div data-role="popup" id="LuminosityChartPopup" class="ui-content">
-       				<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
-       				<div id="LuminosityChart" class="my-chart"></div>
-       			</div>
             </div>
             
 
@@ -191,6 +171,9 @@ $(document).ready(function(){
 	else:
 ?>
 
+var theChart = null;
+var chartTitle = [];
+var chartData = [];
 
 function getWateringPlan(){
 	/**
@@ -281,51 +264,39 @@ function getWateringPlan(){
     });
 }
 
-var plotOutputChart = null;
-var outputChartData = [];
-
 function getOutputsStatus(){
-	/**
-	 * Retrieve outputs' status
-	 */
-	 
-	$.ajax({                                      
-		url: 'php/getOutputsHistory.php',                     
-   		data: "",                       
-   	  	dataType: 'json',
-   	  	async: 'false',    
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){ $.mobile.loading('hide'); },       
-   	   	success: function(data) {
-   	   		if (data.success == true){
-   	   			outputChartData[0] = data.output0;
-   	   			outputChartData[1] = data.output1;
-   	   			outputChartData[2] = data.output2;
-   	   			outputChartData[3] = data.output3;
-   	   			prepareOutputHistory();
- 		    } else {
-        	    console.log("No data retrieved from getOutputHistory");
-		    }
-      	} 
-    }); 
     $.ajax({                                      
 		url: 'php/getOutputsStatus.php',                     
    		data: "",                       
    	  	dataType: 'json',
    	  	async: 'true',    
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){
-			$.mobile.loading('hide'); 
+		beforeSend: function(){ },
+		complete: function(){ 
 			$(".open-output-popup").click(function(){
-				if(plotOutputChart != null) {
-					if($(this).attr('data-output') >= 0 && $(this).attr('data-output') < outputChartData.length)
-						plotOutputChart.series[0].data = outputChartData[$(this).data('output')];
-					else
-						console.log("index out of range outputChartData");
-					plotOutputChart.replot();
-					$( "#OutputChart" ).popup();
-					$( "#OutputChart" ).popup( "open" );
-				} else console.log("plotOutputChart obj is null!");
+				var index = $(this).attr('data-output')
+					if(chartData != null && chartData[index] != null) {
+						if(theChart) theChart.destroy();
+						$('ChartPopup').empty();
+						theChart = $.jqplot('ChartPopup',[chartData[index]], {
+	   	   					title: chartTitle[index],
+   		   					seriesDefaults: { showMarker: false, rendererOptions:{smooth: true}, breakOnNull: true },
+   	   						axesDefaults: {
+   	   							labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+	   	   						labelOptions: { fontSize: '0.75em' }
+   		   					},
+   	   						axes: { 
+   	   							xaxis:{
+   	   								renderer: $.jqplot.DateAxisRenderer,
+   	   								tickOptions: { formatString: '%H:%M' },
+   	   								max: (chartData[index])[(chartData[index]).length-1][0],
+	   	   							min: (chartData[index])[0][0]
+		   	   					},	
+   			   					yaxis: { tickOptions: { formatString: '%.2f'} },
+   	   						}
+   	   					});
+        				$( "#ChartPopupContent" ).popup();
+						$( "#ChartPopupContent" ).popup( "open" );
+					} else console.log("chartData obj is null (index = " + index + ")");
 				return false;
 			});
 		},       
@@ -338,7 +309,7 @@ function getOutputsStatus(){
    	   					_html += "OFF";
    	   				else
 	   					_html += "ON";
-   	   				_html += "</td><td><a href=\"#\" data-output=\"" + i + "\" class=\"open-output-popup\">24h chart</a></td></tr>";
+   	   				_html += "</td><td><a href=\"#\" data-output=\"output" + i + "\" class=\"open-output-popup\">24h chart</a></td></tr>";
    	   			}
         		$('#table-body-outputs').html(_html); 
  		    } else {
@@ -347,6 +318,32 @@ function getOutputsStatus(){
       	} 
     });
 }    	
+
+function getOutputsHistory(){
+	$.ajax({                                      
+		url: 'php/getOutputsHistory.php',                     
+   		data: "",                       
+   	  	dataType: 'json',
+   	  	async: 'true',    
+		beforeSend: function(){ 
+			chartData['output0'] = null;
+   	   		chartData['output1'] = null;
+   	   		chartData['output2'] = null;
+   	   		chartData['output3'] = null; 
+   	   	},
+		complete: function(){},       
+   	   	success: function(data) {
+   	   		if (data.success == true){
+   	   			chartData['output0'] = data.output0;
+   	   			chartData['output1'] = data.output1;
+   	   			chartData['output2'] = data.output2;
+   	   			chartData['output3'] = data.output3;
+ 		    } else {
+        	    console.log("No data retrieved from getOutputHistory");
+		    }
+      	} 
+    });
+}
 
 function getSensorsValues(){
 	/**
@@ -357,17 +354,45 @@ function getSensorsValues(){
    		data: "",                       
    	  	dataType: 'json', 
    	  	async: 'true',      
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){$.mobile.loading('hide'); },    
+		beforeSend: function(){ },
+		complete: function(){ 
+			$(".open-output-popup").click(function(){
+				var index = $(this).attr('data-output')
+					if(chartData != null && chartData[index] != null) {
+						if(theChart) theChart.destroy();
+						$('ChartPopup').empty();
+						theChart = $.jqplot('ChartPopup',[chartData[index]], {
+	   	   					title: chartTitle[index],
+   		   					seriesDefaults: { showMarker: false, rendererOptions:{smooth: true}, breakOnNull: true },
+   	   						axesDefaults: {
+   	   							labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+	   	   						labelOptions: { fontSize: '0.75em' }
+   		   					},
+   	   						axes: { 
+   	   							xaxis:{
+   	   								renderer: $.jqplot.DateAxisRenderer,
+   	   								tickOptions: { formatString: '%H:%M' },
+   	   								max: (chartData[index])[(chartData[index]).length-1][0],
+	   	   							min: (chartData[index])[0][0]
+		   	   					},	
+   			   					yaxis: { tickOptions: { formatString: '%.2f'} },
+   	   						}
+   	   					});
+        				$( "#ChartPopupContent" ).popup();
+						$( "#ChartPopupContent" ).popup( "open" );
+					} else console.log("chartData obj is null (index = " + index + ")");
+				return false;
+			});		
+		},    
    	   	success: function(data) {
    	   		if (data.success == true){
    	   			var _html = "";
    	   			_html += "<tr><th>Date and time</th><td>"+data.date+"</td><td>&nbsp;</td></tr>";
-	  	    	_html += "<tr><th>Temperature</th><td>"+data.temperature+" &deg;C</td><td><a id=\"openTemperatureChart\" href=\"#TemperatureChartPopup\" data-rel=\"popup\">24h chart</a></td></tr>";
-	  	    	_html += "<tr><th>Humidity</th><td>"+data.humidity+" %</td><td><a id=\"openHumidityChart\" href=\"#HumidityChartPopup\" data-rel=\"popup\">24h chart</a></td></tr>";
-        		_html += "<tr><th>Pressure</th><td>"+data.pressure+" Pa</td><td><a id=\"openPressureChart\" href=\"#PressureChartPopup\" data-rel=\"popup\">24h chart</a></td></tr>";
-        		_html += "<tr><th>Soil moisture</th><td>"+data.soilMoisture+"</td><td><a id=\"openSoilMoistureChart\" href=\"#SoilMoistureChartPopup\" data-rel=\"popup\">24h chart</a></td></tr>";
-        		_html += "<tr><th>Luminosity</th><td>"+data.luminosity+" lux</td><td><a id=\"openLuminosityChart\" href=\"#LuminosityChartPopup\" data-rel=\"popup\">24h chart</a></td></tr>";
+	  	    	_html += "<tr><th>Temperature</th><td>"+data.temperature+" &deg;C</td><td><a href=\"#\" data-output=\"temperature\" class=\"open-output-popup\">24h chart</a></td></tr>";
+	  	    	_html += "<tr><th>Humidity</th><td>"+data.humidity+" %</td><td><a href=\"#\" data-output=\"humidity\" class=\"open-output-popup\">24h chart</a></td></tr>";
+        		_html += "<tr><th>Pressure</th><td>"+data.pressure+" Pa</td><td><a href=\"#\" data-output=\"pressure\" class=\"open-output-popup\">24h chart</a></td></tr>";
+        		_html += "<tr><th>Soil moisture</th><td>"+data.soilMoisture+"</td><td><a href=\"#\" data-output=\"soilMoisture\" class=\"open-output-popup\">24h chart</a></td></tr>";
+        		_html += "<tr><th>Luminosity</th><td>"+data.luminosity+" lux</td><td><a href=\"#\" data-output=\"luminosity\" class=\"open-output-popup\">24h chart</a></td></tr>";
         		$('#table-body-sensors').html(_html); 
 		    } else {
         	    $('#table-column-toggle-sensors').html(data.message);
@@ -376,352 +401,63 @@ function getSensorsValues(){
     });
 }
 
-function graphSensorsHistory(){
-	/**
-	 * Retrieve sensors' history
-	 */
+function getSensorsHistory(){
     $.ajax({                                      
-	 	//url: 'php/getSensorsHistory.php',     
 	 	url: 'php/getSensorsHistoryMinutes.php',                
    		data: "",                       
    	  	dataType: 'json', 
    	  	async: 'true',  
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){$.mobile.loading('hide'); },    
    	   	success: function(data) {
-   	   		if (data.success == true){	
-   	   			var plot = $.jqplot('TemperatureChart',[data.temperature], {
-   	   				title: 'Temperature (°C)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M' },
-   	   						max: data.temperature[(data.temperature).length-1][0],
-   	   						min: data.temperature[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.2f'}
-   	   					},
-   	   				}
-   	   			}).replot();
-   	   			var plot1 = $.jqplot('HumidityChart',[data.humidity], {
-   	   				title: 'Humidity (%)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.humidity[(data.humidity).length-1][0],
-   	   						min: data.humidity[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.2f'}
-   	   					}
-   	   				}
-   	   			}).replot();   	   			
-   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
-   	   				title: 'Pressure (Pa)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.pressure).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			}).replot();  	   			
-   	   			var plot3 = $.jqplot('SoilMoistureChart',[data.soilMoisture], {
-   	   				title: 'Soil Moisture',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.pressure).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			}).replot();  	   			
-   	   			var plot4 = $.jqplot('LuminosityChart',[data.luminosity], {
-   	   				title: 'Luminosity (Lux)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.luminosity).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			}).replot();
-		    } else {
-        	    $('sensorsChart').html(data.message);
-        	    console.log("Error retrieving sensors history");
+	   	   	if (data.success == true){
+   				chartData['temperature'] = data.temperature;
+   				chartData['humidity'] = data.humidity;
+   				chartData['pressure'] = data.pressure;
+   				chartData['soilMoisture'] = data.soilMoisture;
+   				chartData['luminosity'] = data.luminosity;
+   		   	} else {
+        	    console.log("Error retrieving sensors history: " + data.message);
 		    }
       	} 
     });
+
 }
 
-function graphSensorsHistoryFirst(){
-	/**
-	 * Retrieve sensors' history
-	 */
-    $.ajax({                                      
-	 	//url: 'php/getSensorsHistory.php',     
-	 	url: 'php/getSensorsHistoryMinutes.php',                
-   		data: "",                       
-   	  	dataType: 'json', 
-   	  	async: 'true',  
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){$.mobile.loading('hide'); },    
-   	   	success: function(data) {
-   	   		if (data.success == true){
-   	   			
-   	   			var plot = $.jqplot('TemperatureChart',[data.temperature], {
-   	   				title: 'Temperature (°C)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M' },
-   	   						max: data.temperature[(data.temperature).length-1][0],
-   	   						min: data.temperature[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.2f'}
-   	   					},
-   	   				}
-   	   			});
-   	   			var plot1 = $.jqplot('HumidityChart',[data.humidity], {
-   	   				title: 'Humidity (%)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.humidity[(data.humidity).length-1][0],
-   	   						min: data.humidity[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.2f'}
-   	   					}
-   	   				}
-   	   			});   	   			
-   	   			var plot2 = $.jqplot('PressureChart',[data.pressure], {
-   	   				title: 'Pressure (Pa)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.pressure).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			});  	   			
-   	   			var plot3 = $.jqplot('SoilMoistureChart',[data.soilMoisture], {
-   	   				title: 'Soil Moisture',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.pressure).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			});  	   			
-   	   			var plot4 = $.jqplot('LuminosityChart',[data.luminosity], {
-   	   				title: 'Luminosity (Lux)',
-   	   				seriesDefaults: {
-   	   					showMarker: false, 
-   	   					rendererOptions:{smooth: true},
-   	   					breakOnNull: true
-   	   				},
-   	   				axesDefaults: {
-   	   					labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-   	   					labelOptions: {
-          					fontSize: '0.75em'
-          				}
-   	   				},
-   	   				axes: { 
-   	   					xaxis:{
-   	   						renderer: $.jqplot.DateAxisRenderer,
-   	   						tickOptions: { formatString: '%H:%M'},
-   	   						max: data.pressure[(data.luminosity).length-1][0],
-   	   						min: data.pressure[0][0]
-   	   					},
-   	   					yaxis: {
-   	   						tickOptions: { formatString: '%.1f'}
-   	   					}
-   	   				}
-   	   			});
-		    } else {
-        	    $('sensorsChart').html(data.message);
-        	    console.log("Error retrieving sensors history");
-		    }
-      	} 
-    });
+function prepareChartTitles(){
+	chartTitle['temperature'] = 'Temperature (C)';
+	chartTitle['humidity'] = 'Humidity (%)';
+	chartTitle['pressure'] = 'Pressure (Pa)';
+	chartTitle['soilMoisture'] = 'Soil Moisture';
+	chartTitle['luminosity'] = 'Luminosity (Lux)';
+	chartTitle['output0'] = 'Output 0';
+	chartTitle['output1'] = 'Output 1';
+	chartTitle['output2'] = 'Output 2';
+	chartTitle['output3'] = 'Output 3';
 }
 
-function prepareOutputHistory(){
-    $.ajax({                                      
-	 	url: 'php/getOutputsHistory.php',     
-	 	data: "",                       
-   	  	dataType: 'json', 
-   	  	async: 'true',  
-		beforeSend: function(){ $.mobile.loading('show'); },
-		complete: function(){$.mobile.loading('hide'); },    
-   	   	success: function(data) {
-   	   		if (data.success == true){
-   	   			plotOutputChart = $.jqplot('OutputChart',[data.output0], {
-		   	   		title: 'Output0',
-   	   				seriesDefaults: { showMarker: false, breakOnNull: true },
-		   	   		axesDefaults: {
- 		  	   			labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-  		 	   			labelOptions: { fontSize: '0.75em' }
-  		 	   		},
-   			   		axes: { 
-   			   			xaxis:{
-   			   				renderer: $.jqplot.DateAxisRenderer,
-   	 		  				tickOptions: { formatString: '%H:%M'},
-   	 		  				max: data.dateTo,
-   	 		  				min: data.dateFrom
-   	   					},
-   	  		 			yaxis: { tickOptions: { formatString: '%d'}, min: -0.2, max: 1.2}
-   	   				}
-   	 			});
-		    } else {
-        	    console.log("Error retrieving sensors history");
-		    }
-      	} 
-    });
+function refreshAll(){
+	$.mobile.loading('show', {
+		text: 'loading',
+		textVisible: true,
+		theme: 'c',
+		html: ""
+	});
+	getWateringPlan();
+	getOutputsStatus();
+	getOutputsHistory();
+	getSensorsValues();
+	getSensorsHistory();
+	$.mobile.loading('hide');
 }
 
 $(document).ready(function(){	
-	getWateringPlan();
-	getOutputsStatus();
-	getSensorsValues();
-	graphSensorsHistoryFirst();
+	prepareChartTitles();
+	refreshAll();
 
-	//Charts
-	//graphOutputHistory();
-
-	
 	$('#refreshGraphs').click(function(){	
-		getWateringPlan();
-		getOutputsStatus();
-		getSensorsValues(); 
-		graphSensorsHistory(); 
+		refreshAll();
 		return false; 
 	});
+	
 	$('#table-column-toggle-watering-plan').on('click', 'tr.watering-plan-item', function(e){
 		e.preventDefault();
 		var id = $(this).attr('data-wpi-id');
@@ -835,13 +571,6 @@ $(document).ready(function(){
 		$('#editWateringPlanItemDuration').html(strValue);
 	});
 });
-
-
-//window.setInterval(function(){ getWateringPlan(); }, 60000); //every minute
-//window.setInterval(function(){ getOutputsStatus(); }, 60000); //every 10 seconds
-//window.setInterval(function(){ getSensorsValues(); }, 60000); //every 10 seconds
-//window.setInterval(function(){ graphSensorsHistory(); }, 300000); //every 5 minutes
-
 
 <?php
 	endif;
