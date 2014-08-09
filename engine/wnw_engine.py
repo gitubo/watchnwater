@@ -11,6 +11,7 @@ import sys
 import os
 import time
 import logging
+import logging.handlers
 from time import sleep
 import subprocess
 
@@ -302,7 +303,14 @@ def stopTurningOnOutput(_output):
 ##################
 
 try:
-	logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+
+	logfile = logging.handlers.TimedRotatingFileHandler(LOG_FILENAME , 'midnight', 1, backupCount=7)
+	logfile.setLevel(logging.DEBUG)
+	logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s', '%m/%d/%Y %H:%M:%S'))
+	logging.getLogger().addHandler(logfile)
+	logging.getLogger().setLevel(logging.DEBUG)
+
+	# logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 	logging.info('\n\n')
 	logging.info('    <-- WnW Engine started -->')
 	
